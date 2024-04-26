@@ -56,3 +56,5 @@ Makefile: Added commands nk_example and pq_example, which build an executable cl
 
 Both noise-c and embedded disco can be build in the same way as they would normally be, so their respective README.md files should have the correct instructions.
 How to build the test files and how I used them is written in the commands.txt file in the Testing_Stuff folder, maybe I should rename both of those at some point.
+
+
