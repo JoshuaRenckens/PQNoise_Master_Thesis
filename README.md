@@ -1,4 +1,4 @@
-##General
+#General
 The changed versions of noise-c and EmbeddedDisco code that add the PQNoise handshakes. Also contains the PQNoise go code as it was used to test for compatibility between the c and go code.
 
 
@@ -14,10 +14,10 @@ Any prerequities of the regular noise-c and embedded disco implementations of co
 
 
 
-###Changes that were made to the existing implementations
+##Changes that were made to the existing implementations
 
 
-##Noise-c
+###Noise-c
 
 patterns.c: Added the PQNoise patterns and added translation for ID lookup for the PQ patterns.
 names.c: Added the new patterns as well as an ID for Kyber(as a replacement for the DH algo to be used with the PQNoise patterns) to the ID mapping.
@@ -41,7 +41,7 @@ Added -loqs to the LDADD variable in the Makefile.am file in the following folde
 											
 
 
-##Disco
+###Disco
 
 handshake_patterns.py: Added the PQNoise handshakes to have the python program generate the token strings for the patterns correctly.
 disco_asymmetric.h: Added the generated token strings for the PQNoise patterns as well as a function, generate_pqKeyPair, to generate kyber keypairs. Also added additional arguments for the 		
