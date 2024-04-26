@@ -1,0 +1,60 @@
+Stuff to do before being able to run:
+Install openssl, pre-installed version on ubuntu 22.04 works just fine.
+Build and install liboqs, follow the steps on the github page.
+
+Set ld variable for liboqs, since we want to use the kyber implementation from there, otherwise the linker won't find it.
+
+Build instructions for disco work even after including the Kem stuff, only need to add -loqs for any example you build, command in Makefile is changed to build the Kem example as well.
+Build instructions for noise-c work exactly as before, some slight changes in the Makefile.am files were done to make sure of that.
+
+
+
+
+Build command for the noise_c example, in the Testing_Stuff/Noise-c folder: (-loqs necessary after the PQNoise stuff was added, might get removed later in favor of directly including kyber files)
+Include noise_c as library
+gcc -Wall -g noise_c_PQ_server.c -I ../../Noise_c/include/ -L ../../Noise_c/src/protocol -lnoiseprotocol -o server -loqs
+gcc -Wall -g noise_c_PQ_client.c -I ../../Noise_c/include/ -L ../../Noise_c/src/protocol -lnoiseprotocol -o client -loqs
+
+
+Build command for the disco example, in the Testing_Stuff/Disco folder: (Not actually sure if those still work. The ones I added in the Embedded_Disco/tests folder should work though, they can be build with the makefile in the Embedded_Disco folder).
+Needed to remove fsanitize in the make file of disco, ran into issues with libasan otherwise. -loqs is needed to include the OQS library to use their Kyber implementation, will probably be necessary for the noise_c stuff as well, though this could mean that we don't need to worry about including it in the makefile directly.
+gcc -Wall -g disco_NK_server.c -I ../../Embedded_Disco/lib/ -L ../../Embedded_Disco/ -l:disco.so -o disco_server -loqs
+gcc -Wall -g disco_NK_client.c -I ../../Embedded_Disco/lib/ -L ../../Embedded_Disco/ -l:disco.so -o disco_client -loqs
+
+
+
+Reproducing the benchmarking for noise_c:
+
+Check if hyperthreading is on on linux:
+cat /sys/devices/system/cpu/smt/active
+
+Disable hyperthreading:
+echo off | sudo tee /sys/devices/system/cpu/smt/control
+
+Check whether turbo boost is enabled, command technically checks whether "not turbo" is enabled, so 0 here means turbo is on "Not turbo is off" double negation:
+cat /sys/devices/system/cpu/intel_pstate/no_turbo
+
+Disable turbo boost on linux:
+echo "1" | sudo tee /sys/devices/system/cpu/intel_pstate/no_turbo
+
+Commands to install cpupower(if needed):
+sudo apt-get install -y linux-tools-common
+sudo apt install linux-tools-common linux-tools-`uname -r`
+
+Set cpugovernor to performance to disable cpu frequency scaling:
+sudo cpupower frequency-set --governor performance
+
+Check that all of the cpus are using the performance governor:
+cpupower frequency-info -o proc
+
+Run the server or client as follows:
+taskset -c 2 sudo nice -n -20 ./server
+taskset -c 2 sudo nice -n -20 ./client
+
+taskset -c 2 will pin the program to core number 3, and sudo nice -n -20 will set the program to be highest priority (-20 - 20 with -20 being highest).
+
+It only ever runs one handshake at a time, you have to change the name to whichever one you want to run and also uncomment/comment the code parts that create and send/receive the static keys as needed.
+Additionally the final confirm bit is only necessary when one role would send the last message as well as the first message, whether that be sending the key before the actual handshake starts for a K or just the first message of th handshake in general. If that is the case then this role should be the one to wait for the confirmation bit sent from the other role, this avoids some issues I ran across otherwise.
+
+
+
