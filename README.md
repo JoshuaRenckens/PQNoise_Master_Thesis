@@ -6,10 +6,16 @@ The changed versions of noise-c and EmbeddedDisco code that add the PQNoise hand
 All of this works fine on a laptop with ubuntu 22.04, no clue about any other platform.
 
 Needs liboqs installed to run, since their implementation of kyber is used, specifically kyber512. The install instructions on their github work fine: https://github.com/open-quantum-safe/liboqs, however we need to make a shared library, so -DBUILD_SHARED_LIBS=ON is needed on the cmake -GNinja .. command, as written in their instructions.
-
 Then do sudo ldconfig to update the ldconfig path. If it doesn't work then add a new .config file in /etc/ld.so.conf.d where you add the path to where the library was installed, followed by sudo ldconfig.
 
 Any prerequities of the regular noise-c and embedded disco implementations of course still apply as well.
+
+
+To run PQTLS tests (not tests yet, writing this down before I forget):
+
+Needs openssl 3.x installed, a version that works should be pre-installed on any system with ubuntu 22.04, not sure for earlier versions. 
+Need to install and activate oqsprovider, to do so simply follow the build and install instructions on their github https://github.com/open-quantum-safe/oqs-provider , it might be necessary do install the built library manually, so copying it to the correct folder so openssl can find it. Simply run a command like this: "openssl list -signature-algorithms -provider oqsprovider", which should list the available signature algorithms for the provider, if it can find it, if not then the error message should contain the exact folder where it expects the library to be, so you can simply copy the library there manually.
+Lastly the provider can be permanently activated by following the instructions in their usage.md file.
 
 
 

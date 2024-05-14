@@ -21,6 +21,8 @@ Needed to remove fsanitize in the make file of disco, ran into issues with libas
 gcc -Wall -g disco_NK_server.c -I ../../Embedded_Disco/lib/ -L ../../Embedded_Disco/ -l:disco.so -o disco_server -loqs
 gcc -Wall -g disco_NK_client.c -I ../../Embedded_Disco/lib/ -L ../../Embedded_Disco/ -l:disco.so -o disco_client -loqs
 
+Build command, for now, for the google benchmark example:
+g++  google_bench_test.cpp -std=c++11 -isystem ../../Noise_c/include/ -L../../Noise_c/src/protocol -lnoiseprotocol -lbenchmark -lpthread -o bench -loqs
 
 
 Reproducing the benchmarking for noise_c:
@@ -51,7 +53,7 @@ Run the server or client as follows:
 taskset -c 2 sudo nice -n -20 ./server
 taskset -c 2 sudo nice -n -20 ./client
 
-taskset -c 2 will pin the program to core number 3, and sudo nice -n -20 will set the program to be highest priority (-20 - 20 with -20 being highest).
+taskset -c 2 will pin the program to core number 3, and sudo nice -n -20 will set the program to be highest priority (-20 to 19 with -20 being highest priority).
 
 It only ever runs one handshake at a time, you have to change the name to whichever one you want to run and also uncomment/comment the code parts that create and send/receive the static keys as needed.
 Additionally the final confirm bit is only necessary when one role would send the last message as well as the first message, whether that be sending the key before the actual handshake starts for a K or just the first message of th handshake in general. If that is the case then this role should be the one to wait for the confirmation bit sent from the other role, this avoids some issues I ran across otherwise.
