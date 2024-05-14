@@ -11,7 +11,7 @@ Then do sudo ldconfig to update the ldconfig path. If it doesn't work then add a
 Any prerequities of the regular noise-c and embedded disco implementations of course still apply as well.
 
 
-To run PQTLS tests (not tests yet, writing this down before I forget):
+To run post quantum TLS timing tests (no tests yet, writing this down before I forget):
 
 Needs openssl 3.x installed, a version that works should be pre-installed on any system with ubuntu 22.04, not sure for earlier versions. 
 Need to install and activate oqsprovider, to do so simply follow the build and install instructions on their github https://github.com/open-quantum-safe/oqs-provider , it might be necessary do install the built library manually, so copying it to the correct folder so openssl can find it. Simply run a command like this: "openssl list -signature-algorithms -provider oqsprovider", which should list the available signature algorithms for the provider, if it can find it, if not then the error message should contain the exact folder where it expects the library to be, so you can simply copy the library there manually.
