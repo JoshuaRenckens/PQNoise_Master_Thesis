@@ -99,7 +99,7 @@ int main(int argc, char *argv[])
 {
     NoiseDHState *dh;
     NoiseHandshakeState *handshake;
-    int err, action, key_size, socket_desc , new_socket , c;
+    int err, action, key_size, socket_desc , new_socket , c, started;
     struct sockaddr_in server , client;
     NoiseBuffer mbuf;
     size_t message_size, received, full_size;
@@ -226,7 +226,7 @@ int main(int argc, char *argv[])
 		}
 	    	
 	    	/* Run the handshake until we run out of things to read or write */
-	    	start2 = get_cpucycles();
+	    	started = 0;
 		while (ok) {
 		
 			action = noise_handshakestate_get_action(handshake);
@@ -295,6 +295,11 @@ int main(int argc, char *argv[])
 				    }
 				    received += message_size;
 				    //printf("Message_size: %ld, Full size: %ld, Received: %ld\n", message_size, full_size, received);
+			    }
+			    // Start measuring the servers time after it received the first message
+			    if(!started){
+			    	start2 = get_cpucycles();
+			    	started = 1;
 			    }
 			    noise_buffer_set_input(mbuf, message + 2, received - 2);
 			    

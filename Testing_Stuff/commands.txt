@@ -55,8 +55,12 @@ taskset -c 2 sudo nice -n -20 ./client
 
 taskset -c 2 will pin the program to core number 3, and sudo nice -n -20 will set the program to be highest priority (-20 to 19 with -20 being highest priority).
 
-It only ever runs one handshake at a time, you have to change the name to whichever one you want to run and also uncomment/comment the code parts that create and send/receive the static keys as needed.
-Additionally the final confirm bit is only necessary when one role would send the last message as well as the first message, whether that be sending the key before the actual handshake starts for a K or just the first message of th handshake in general. If that is the case then this role should be the one to wait for the confirmation bit sent from the other role, this avoids some issues I ran across otherwise.
+
+Still need to use the above commands except for the taskset and nice when running with namespaces.
+Commands to run in the namespaces:
+sudo ip netns exec srv_ns ./server
+sudo ip netns exec cli_ns ./client
+
 
 
 
