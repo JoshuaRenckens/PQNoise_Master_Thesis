@@ -136,7 +136,7 @@ int main(int argc, char *argv[])
 		min = 10000000000;
 		current = 0;
 	    
-	    	printf("\nStarting runs for %s handshake.\n", to_test[k]);
+	    	//printf("\nStarting runs for %s handshake.\n", to_test[k]);
 	    	// Run the handshake test_number of times
 	    	
 		for(int i = 0; i <= test_number; i++){
@@ -343,12 +343,19 @@ int main(int argc, char *argv[])
 		}
 		float comp_percent = ((float) total_time_comp) / ((float) total_time) * 100;
 		qsort(results, sizeof(results)/sizeof(*results), sizeof(*results), comp);
-		printf("Average time taken by the handshakes: %ld cycles.\n", total_time/test_number);
+		if(k % 2 == 0){
+			printf("\\hline\\hline \n");
+		}
+		printf("%s & %5.1f & %5.1f & %5.1f & %5.1f & %5.2f & %5.2f \\\\ \n", to_test[k], (total_time/test_number)/1000000.0, results[500]/1000000.0, max/1000000.0, min/1000000.0, (total_time_comp/test_number)/1000000.0, comp_percent);
+		if(k % 2 == 0){
+			printf("\\hline \n");
+		}
+		/*printf("Average time taken by the handshakes: %ld cycles.\n", total_time/test_number);
 		printf("Average time taken for the computations: %ld cycles.\n", total_time_comp/test_number);
         	printf("On average %5.2f percent of the total time is computation.\n\n", comp_percent);
 		printf("Median time taken by the handshakes: %ld cycles.\n", results[500]);
 		printf("Maximum time taken by the handshakes: %ld cycles.\n", max);
-		printf("Minimum time taken by the handshakes: %ld cycles.\n", min);
+		printf("Minimum time taken by the handshakes: %ld cycles.\n", min);*/
 	}
 	close(socket_desc);
 
