@@ -1,6 +1,5 @@
-/*Mostly taken from https://github.com/xvzcf/pq-tls-benchmark/, s_timer.c file*/
-
 #include <stdio.h>
+#include <limits.h>
 
 #include <openssl/ssl.h>
 #include <openssl/err.h>
@@ -11,6 +10,23 @@
 #define MS_IN_S 1000
 
 const char* host = "10.0.0.1:4433";
+
+int64_t get_cpucycles()
+{ // Access system counter for benchmarking
+  unsigned int hi, lo;
+
+  //asm("cpuid");
+  asm volatile ("rdtsc\n\t" : "=a" (lo), "=d"(hi));
+  return ((int64_t)lo) | (((int64_t)hi) << 32);
+}
+
+int comp(const void* elem1, const void* elem2){
+	int val1 = *((int*)elem1);
+	int val2 = *((int*)elem2);
+	return (val1 > val2) - (val1 < val2);
+}
+
+static int test_number = 1000;
 
 SSL* do_tls_handshake(SSL_CTX* ssl_ctx)
 {
@@ -39,40 +55,24 @@ SSL* do_tls_handshake(SSL_CTX* ssl_ctx)
         SSL_free(ssl);
         return 0;
     }
-
-#if defined(SOL_SOCKET) && defined(SO_LINGER)
-    {
-        struct linger no_linger = {.l_onoff = 1, .l_linger = 0};
-        int fd = SSL_get_fd(ssl);
-        if (fd >= 0)
-        {
-            (void)setsockopt(fd, SOL_SOCKET, SO_LINGER, (char*)&no_linger,
-                             sizeof(no_linger));
-        }
-    }
-#endif
+    
     return ssl;
 }
 
 int main(int argc, char* argv[])
 {
+    uint64_t total_time = 0, max = 0, min = INT_MAX, current = 0;
+    uint64_t results[test_number];
+    uint64_t start, stop;
+    
     int ret = -1;
     SSL_CTX* ssl_ctx = 0;
-    if(argc != 3)
-    {
-        fprintf(stderr, "Wrong number of arguments.\n");
-        goto end;
-    }
-    const char* kex_alg = argv[1];
-    const size_t measurements_to_make = strtol(argv[2], 0, 10);
-    size_t measurements = 0;
 
     const char* ciphersuites = "TLS_AES_256_GCM_SHA384";
     const SSL_METHOD* ssl_meth = TLS_client_method();
     SSL* ssl = NULL;
 
-    struct timespec start, finish;
-    double* handshake_times_ms = malloc(measurements_to_make * sizeof(*handshake_times_ms));
+    //struct timespec start, finish;
 
     ssl_ctx = SSL_CTX_new(ssl_meth);
     if (!ssl_ctx)
@@ -102,53 +102,58 @@ int main(int argc, char* argv[])
     {
         goto ossl_error;
     }
-    ret = SSL_CTX_set1_groups_list(ssl_ctx, kex_alg);
+    
+    ret = SSL_CTX_set1_groups_list(ssl_ctx, "kyber512");
     if (ret != 1)
     {
         goto ossl_error;
     }
 
-    ret = SSL_CTX_load_verify_locations(ssl_ctx, "../tmp/nginx/conf/CA.crt", 0);
+    ret = SSL_CTX_load_verify_locations(ssl_ctx, "CA.crt", 0);
     if(ret != 1)
     {
         goto ossl_error;
     }
     SSL_CTX_set_verify(ssl_ctx, SSL_VERIFY_PEER, NULL);
+    
+    for(int i = 0; i <= test_number; i++){
+	    //clock_gettime(CLOCK_MONOTONIC_RAW, &start);
+	    start = get_cpucycles();
+	    ssl = do_tls_handshake(ssl_ctx);
+	    stop = get_cpucycles();
+	    //clock_gettime(CLOCK_MONOTONIC_RAW, &finish);
 
-    while(measurements < measurements_to_make)
-    {
-        clock_gettime(CLOCK_MONOTONIC_RAW, &start);
-        ssl = do_tls_handshake(ssl_ctx);
-        clock_gettime(CLOCK_MONOTONIC_RAW, &finish);
-        if (!ssl)
-        {
-            /* Retry since at high packet loss rates,
-             * the connect() syscall fails sometimes.
-             * Non-retryable errors are caught by manual
-             * inspection of logs, which has sufficed
-             * for our purposes */
-            continue;
-        }
+	    SSL_set_shutdown(ssl, SSL_SENT_SHUTDOWN | SSL_RECEIVED_SHUTDOWN);
+	    ret = BIO_closesocket(SSL_get_fd(ssl));
+	    if(ret == -1)
+	    {
+		goto ossl_error;
+	    }
 
-        SSL_set_shutdown(ssl, SSL_SENT_SHUTDOWN | SSL_RECEIVED_SHUTDOWN);
-        ret = BIO_closesocket(SSL_get_fd(ssl));
-        if(ret == -1)
-        {
-            goto ossl_error;
-        }
-
-        SSL_free(ssl);
-
-        handshake_times_ms[measurements] = ((finish.tv_sec - start.tv_sec) * MS_IN_S) + ((finish.tv_nsec - start.tv_nsec) / NS_IN_MS);
-        measurements++;
+	    SSL_free(ssl);
+	    
+	    current = stop - start;
+	    // One run to warm the cache where we won't include the time
+	    if(i != 0){
+		total_time += current;
+		
+		if(current > max){
+			max = current;
+		}
+		
+		if(current < min){
+			min = current;
+		}
+		results[i-1] = current;
+	    }
+	    
+	    //printf("%f,", ((finish.tv_sec - start.tv_sec) * MS_IN_S) + ((finish.tv_nsec - start.tv_nsec) / NS_IN_MS));
+	    
     }
-
-    for(size_t i = 0; i < measurements - 1; i++)
-    {
-        printf("%f,", handshake_times_ms[i]);
-    }
-    printf("%f", handshake_times_ms[measurements - 1]);
-
+    
+    qsort(results, sizeof(results)/sizeof(*results), sizeof(*results), comp);
+    printf("Kyber512 & %5.1f & %5.1f & %5.1f & %5.1f \\\\ \n", (total_time/test_number)/1000000.0, results[500]/1000000.0, max/1000000.0, min/1000000.0);
+    
     ret = 0;
     goto end;
 

@@ -1154,9 +1154,10 @@ static int noise_handshakestate_write
     NoiseBuffer rest;
     size_t len;
     size_t mac_len;
+    size_t shared_len;
+    uint8_t *cipher;
+    uint8_t *shared;
     uint8_t token;
-    uint8_t cipher[768];
-    uint8_t  shared[32];
     int err;
 
     /* Process tokens until the direction changes or the pattern ends */
@@ -1309,7 +1310,10 @@ static int noise_handshakestate_write
             /*EKEM token for PQNoise*/
             if (!state->dh_remote_ephemeral)
                 return NOISE_ERROR_INVALID_STATE;
-            len = 768;
+            len = state->dh_remote_ephemeral->cipher_len;
+            shared_len = state->dh_remote_ephemeral->shared_key_len;
+            cipher = alloca(len);
+            shared = alloca(shared_len);
 
             err = state->dh_remote_ephemeral->encaps(state->dh_remote_ephemeral, cipher, shared);
             if (err != NOISE_ERROR_NONE)
@@ -1325,7 +1329,9 @@ static int noise_handshakestate_write
             rest.size += len;
 
             // Mix the resulting shared secret into the chaining key
-            err = noise_symmetricstate_mix_key(state->symmetric, shared, 32);
+            err = noise_symmetricstate_mix_key(state->symmetric, shared, shared_len);
+            noise_clean(cipher, len);
+            noise_clean(shared, shared_len);
             if (err != NOISE_ERROR_NONE)
                 break;
 
@@ -1334,7 +1340,10 @@ static int noise_handshakestate_write
             /*SKEM token for PQNoise*/
             if (!state->dh_remote_static)
                 return NOISE_ERROR_INVALID_STATE;
-            len = 768;
+            len = state->dh_remote_static->cipher_len;
+            shared_len = state->dh_remote_static->shared_key_len;
+            cipher = alloca(len);
+            shared = alloca(shared_len);
 
             err = state->dh_remote_static->encaps(state->dh_remote_static, cipher, shared);
             if (err != NOISE_ERROR_NONE)
@@ -1351,7 +1360,9 @@ static int noise_handshakestate_write
                 break;
 
             // Mix the resulting shared secret into the chaining key
-            err = noise_symmetricstate_mix_key(state->symmetric, shared, 32);
+            err = noise_symmetricstate_mix_key(state->symmetric, shared, shared_len);
+            noise_clean(cipher, len);
+            noise_clean(shared, shared_len);
             if (err != NOISE_ERROR_NONE)
                 break;
 
@@ -1658,7 +1669,7 @@ static int noise_handshakestate_read
             break;
         case NOISE_TOKEN_EKEM:
             /*EKEM token for PQNoise*/
-            len = 768;
+            len = state->dh_local_ephemeral->cipher_len;
             if (msg.size < len)
                 return NOISE_ERROR_INVALID_LENGTH;
 
@@ -1683,7 +1694,7 @@ static int noise_handshakestate_read
             if (!state->dh_local_static)
                 return NOISE_ERROR_INVALID_STATE;
             mac_len = noise_symmetricstate_get_mac_length(state->symmetric);
-            len = 768 + mac_len;
+            len = state->dh_local_static->cipher_len + mac_len;
             if (msg.size < len)
                 return NOISE_ERROR_INVALID_LENGTH;
             msg2.data = msg.data;

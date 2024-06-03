@@ -114,6 +114,8 @@ NoiseDHState *noise_curve448_new(void)
     state->parent.private_key_len = 56;
     state->parent.public_key_len = 56;
     state->parent.shared_key_len = 56;
+    // Cipher length is not used here
+    state->parent.cipher_len = 0;
     state->parent.private_key = state->private_key;
     state->parent.public_key = state->public_key;
     state->parent.generate_keypair = noise_curve448_generate_keypair;

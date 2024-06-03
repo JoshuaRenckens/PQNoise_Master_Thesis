@@ -109,11 +109,11 @@ NoiseDHState *pqnoise_kyber_new(void)
         return 0;
     state->kem = OQS_KEM_new(OQS_KEM_alg_kyber_512);
     state->parent.dh_id = NOISE_DH_KYBER;
-    state->parent.pq_only = 1;
     state->parent.nulls_allowed = 0;
     state->parent.private_key_len = 1632;
     state->parent.public_key_len = 800;
     state->parent.shared_key_len = 32;
+    state->parent.cipher_len = 768;
     state->parent.private_key = state->private_key;
     state->parent.public_key = state->public_key;
     state->parent.generate_keypair = noise_kyber_generate_keypair;

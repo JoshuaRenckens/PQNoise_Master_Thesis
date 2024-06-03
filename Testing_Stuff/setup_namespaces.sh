@@ -84,6 +84,7 @@ ip netns exec ${CLIENT_NS} \
       dev ${CLIENT_VETH} \
       root netem \
            limit 1000 \
+           loss 0% \
            delay 0.24ms \
            rate 1000mbit
 
@@ -92,6 +93,7 @@ ip netns exec ${SERVER_NS} \
       dev ${SERVER_VETH} \
       root netem \
            limit 1000 \
+           loss 0% \
            delay 0.24ms \
            rate 1000mbit
       

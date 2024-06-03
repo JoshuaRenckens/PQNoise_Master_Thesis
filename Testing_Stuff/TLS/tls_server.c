@@ -1,5 +1,3 @@
-/*Mostly taken from https://wiki.openssl.org/index.php/Simple_TLS_Server*/
-
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
@@ -57,12 +55,12 @@ SSL_CTX *create_context()
 void configure_context(SSL_CTX *ctx)
 {
     /* Set the key and cert */
-    if (SSL_CTX_use_certificate_file(ctx, "cert.pem", SSL_FILETYPE_PEM) <= 0) {
+    if (SSL_CTX_use_certificate_file(ctx, "servercert.pem", SSL_FILETYPE_PEM) <= 0) {
         ERR_print_errors_fp(stderr);
         exit(EXIT_FAILURE);
     }
 
-    if (SSL_CTX_use_PrivateKey_file(ctx, "key.pem", SSL_FILETYPE_PEM) <= 0 ) {
+    if (SSL_CTX_use_PrivateKey_file(ctx, "serverkey.pem", SSL_FILETYPE_PEM) <= 0 ) {
         ERR_print_errors_fp(stderr);
         exit(EXIT_FAILURE);
     }
@@ -87,7 +85,7 @@ int main(int argc, char **argv)
         struct sockaddr_in addr;
         unsigned int len = sizeof(addr);
         SSL *ssl;
-        const char reply[] = "test\n";
+        //const char reply[] = "test\n";
 
         int client = accept(sock, (struct sockaddr*)&addr, &len);
         if (client < 0) {
@@ -96,13 +94,14 @@ int main(int argc, char **argv)
         }
 
         ssl = SSL_new(ctx);
+
         SSL_set_fd(ssl, client);
 
         if (SSL_accept(ssl) <= 0) {
             ERR_print_errors_fp(stderr);
-        } else {
+        } /*else {
             SSL_write(ssl, reply, strlen(reply));
-        }
+        }*/
 
         SSL_shutdown(ssl);
         SSL_free(ssl);

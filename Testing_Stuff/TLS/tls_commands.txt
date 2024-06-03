@@ -1,0 +1,35 @@
+Commands to compile the tls client and server files:
+
+Server: 
+gcc -Wall -g tls_server.c -o server -lssl -lcrypto -loqs
+
+Client: 
+gcc -Wall -g tls_client.c -o client -lssl -lcrypto -loqs
+
+
+Currently not 100% sure if loqs is needed, we'll find out when it runs.
+
+Commands to generate files nessecary for the server:
+These commands are all for the generation of information needed for the signatures that TLS uses, so we will use regular crypto here and not a post quantum signature scheme. (Up for change maybe)
+The path /usr/lib/ssl/openssl.cnf may need to be changed by whoever uses it to the correct path on their system.
+
+Generates the parameters for the curve that we want to use
+openssl ecparam -out prime256v1.pem -name prime256v1
+
+Generates the key and certificate for our certificate authority so we can sign the server certificate ourselves
+openssl req -x509 -new -newkey ec:prime256v1.pem -keyout CA.key -out CA.crt -nodes -subj "/CN=OQS test ecdsap256 CA" -days 365 -config /usr/lib/ssl/openssl.cnf
+
+Generates the server key as well as a certificate signing request.
+openssl req -new -newkey ec:prime256v1.pem -keyout serverkey.pem -out server.csr -nodes -subj "/CN=oqstest CA ecdsap256" -config /usr/lib/ssl/openssl.cnf
+
+Generates the server certificate
+openssl x509 -req -in server.csr -out servercert.pem -CA CA.crt -CAkey CA.key -CAcreateserial -days 365
+
+
+
+sudo ip netns exec srv_ns ./server
+sudo ip netns exec cli_ns ./client
+
+
+
+
