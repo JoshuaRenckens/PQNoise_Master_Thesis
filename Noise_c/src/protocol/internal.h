@@ -227,9 +227,6 @@ struct NoiseDHState_s
     /** \brief Non-zero if this algorithm only supports ephemeral keys */
     uint8_t ephemeral_only : 1;
 
-    /** \brief Non-zero if this algorithm only supports PQNoise patterns */
-    uint8_t pq_only : 1;
-
     /** \brief Non-zero if null public keys are allowed with this algorithm */
     uint8_t nulls_allowed : 1;
 
@@ -241,6 +238,9 @@ struct NoiseDHState_s
 
     /** \brief Length of the shared key for this algorithm in bytes */
     uint16_t shared_key_len;
+
+    /** \brief Length of the cipher for this algorithm in bytes (used for PQNoise) */
+    uint16_t cipher_len;
 
     /** \brief Points to the private key in the subclass state */
     uint8_t *private_key;
@@ -588,6 +588,9 @@ struct NoiseHandshakeState_s
     /** \brief Points to the DHState object for local hybrid forward secrecy key */
     NoiseDHState *dh_local_hybrid;
 
+    /** \brief Points to the DHState object for local static hybrid key (used by the regular+PQNoise combination patterns) */
+    NoiseDHState *dh_local_hybrid_static;
+
     /** \brief Points to the DHState object for remote static key */
     NoiseDHState *dh_remote_static;
 
@@ -596,6 +599,9 @@ struct NoiseHandshakeState_s
 
     /** \brief Points to the DHState object for remote hybrid forward secrecy key */
     NoiseDHState *dh_remote_hybrid;
+
+    /** \brief Points to the DHState object for remote static hybrid key (used by the regular+PQNoise combination patterns) */
+    NoiseDHState *dh_remote_hybrid_static;
 
     /** \brief Points to the object for the fixed ephemeral test key */
     NoiseDHState *dh_fixed_ephemeral;
@@ -628,43 +634,51 @@ struct NoiseHandshakeState_s
 #define NOISE_TOKEN_FF          8   /**< "ff" token (hybrid forward secrecy) */
 #define NOISE_TOKEN_EKEM        9   /**< "ekem" token, for PQ_Noise */
 #define NOISE_TOKEN_SKEM        10  /**< "skem" token, for PQ_Noise */
+#define NOISE_TOKEN_EH          11  /**< "eh" token, for the hybrid version using PQNoise */
+#define NOISE_TOKEN_SH          12  /**< "sh" token for the hybrid version using PQNoise */
+#define NOISE_TOKEN_EKEMH       13  /**< "ekemh" token for the hybrid version using PQNoise*/
+#define NOISE_TOKEN_SKEMH       14  /**< "skemh" token for the hybrid version using PQNoise */
 #define NOISE_TOKEN_FLIP_DIR    255 /**< Flip the handshake direction */
 
 /** Pattern requires a local static keypair */
-#define NOISE_PAT_FLAG_LOCAL_STATIC     (1 << 0)
+#define NOISE_PAT_FLAG_LOCAL_STATIC         (1 << 0)
 /** Pattern requires a local ephemeral keypair */
-#define NOISE_PAT_FLAG_LOCAL_EPHEMERAL  (1 << 1)
+#define NOISE_PAT_FLAG_LOCAL_EPHEMERAL      (1 << 1)
 /** Pattern requires that the local public key be provided
     ahead of time to start the protocol.  That is, it is not
     sent as part of the protocol but is assumed to already be
     known to the other party. */
-#define NOISE_PAT_FLAG_LOCAL_REQUIRED   (1 << 2)
+#define NOISE_PAT_FLAG_LOCAL_REQUIRED       (1 << 2)
 /** Pattern requires that the local ephemeral key be provided
     ahead of time to start the protocol (for XXfallback) */
-#define NOISE_PAT_FLAG_LOCAL_EPHEM_REQ  (1 << 3)
+#define NOISE_PAT_FLAG_LOCAL_EPHEM_REQ      (1 << 3)
 /** Pattern requires a local hybrid keypair */
-#define NOISE_PAT_FLAG_LOCAL_HYBRID     (1 << 4)
+#define NOISE_PAT_FLAG_LOCAL_HYBRID         (1 << 4)
 /** Pattern requires that the local hybrid key be provided
     ahead of time to start the protocol (for XXfallback) */
-#define NOISE_PAT_FLAG_LOCAL_HYBRID_REQ (1 << 5)
+#define NOISE_PAT_FLAG_LOCAL_HYBRID_REQ     (1 << 5)
+/** Pattern requires a local hybrid static keypair */
+#define NOISE_PAT_FLAG_LOCAL_HYBRID_STATIC  (1 << 6)
 
 /** Pattern requires a remote static public key */
-#define NOISE_PAT_FLAG_REMOTE_STATIC    (1 << 8)
+#define NOISE_PAT_FLAG_REMOTE_STATIC        (1 << 8)
 /** Pattern requires a remote ephemeral public key */
-#define NOISE_PAT_FLAG_REMOTE_EPHEMERAL (1 << 9)
+#define NOISE_PAT_FLAG_REMOTE_EPHEMERAL     (1 << 9)
 /** Pattern requires that the remote public key be provided
     ahead of time to start the protocol.  That is, it is not
     sent as part of the protocol but is assumed to already be
     known to the other party. */
-#define NOISE_PAT_FLAG_REMOTE_REQUIRED  (1 << 10)
+#define NOISE_PAT_FLAG_REMOTE_REQUIRED      (1 << 10)
 /** Pattern requires that the remote ephemeral key be provided
     ahead of time to start the protocol (for XXfallback) */
-#define NOISE_PAT_FLAG_REMOTE_EPHEM_REQ (1 << 11) 
+#define NOISE_PAT_FLAG_REMOTE_EPHEM_REQ     (1 << 11)
 /** Pattern requires a remote hybrid public key */
-#define NOISE_PAT_FLAG_REMOTE_HYBRID    (1 << 12)
+#define NOISE_PAT_FLAG_REMOTE_HYBRID        (1 << 12)
 /** Pattern requires that the remote hybrid key be provided
     ahead of time to start the protocol (for XXfallback) */
-#define NOISE_PAT_FLAG_REMOTE_HYBRID_REQ (1 << 13)
+#define NOISE_PAT_FLAG_REMOTE_HYBRID_REQ    (1 << 13)
+/** Pattern requires a remote hybrid static public key */
+#define NOISE_PAT_FLAG_REMOTE_HYBRID_STATIC (1 << 14)
 
 /** Local static keypair is required for the handshake */
 #define NOISE_REQ_LOCAL_REQUIRED        (1 << 0)

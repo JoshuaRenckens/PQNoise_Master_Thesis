@@ -108,6 +108,18 @@ extern "C" {
 #define NOISE_PATTERN_IN_PQ             NOISE_ID('P', 109)
 #define NOISE_PATTERN_IK_PQ             NOISE_ID('P', 110)
 #define NOISE_PATTERN_IX_PQ             NOISE_ID('P', 111)
+#define NOISE_PATTERN_NN_HYB            NOISE_ID('P', 112)
+#define NOISE_PATTERN_NK_HYB            NOISE_ID('P', 113)
+#define NOISE_PATTERN_NX_HYB            NOISE_ID('P', 114)
+#define NOISE_PATTERN_XN_HYB            NOISE_ID('P', 115)
+#define NOISE_PATTERN_XK_HYB            NOISE_ID('P', 116)
+#define NOISE_PATTERN_XX_HYB            NOISE_ID('P', 117)
+#define NOISE_PATTERN_KN_HYB            NOISE_ID('P', 118)
+#define NOISE_PATTERN_KK_HYB            NOISE_ID('P', 119)
+#define NOISE_PATTERN_KX_HYB            NOISE_ID('P', 120)
+#define NOISE_PATTERN_IN_HYB            NOISE_ID('P', 121)
+#define NOISE_PATTERN_IK_HYB            NOISE_ID('P', 122)
+#define NOISE_PATTERN_IX_HYB            NOISE_ID('P', 123)
 
 /* Protocol name prefixes */
 #define NOISE_PREFIX_NONE               0

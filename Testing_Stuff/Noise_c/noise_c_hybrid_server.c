@@ -9,41 +9,29 @@
 #include <unistd.h>
 #include <time.h>
 
-/*static uint8_t const priv_static_key[32] = {
-    0x20, 0x1f, 0xb3, 0x99, 0xcf, 0x1e, 0x85, 0xbc,
-    0xf3, 0xe0, 0x33, 0xf5, 0x0b, 0x29, 0x06, 0x2e,
-    0x81, 0x81, 0x52, 0xe7, 0xb1, 0xc5, 0x83, 0xbe,
-    0x20, 0x9c, 0x46, 0x5a, 0x5e, 0x2d, 0x57, 0x5a
-};
-
-static uint8_t const pub_static_key[32] = {
-    0x4d, 0xfe, 0xb6, 0xba, 0x4a, 0x7b, 0xcd, 0xf0,
-    0x58, 0x1d, 0x9c, 0x31, 0x53, 0x64, 0xb5, 0x03,
-    0xd9, 0xe1, 0x42, 0x41, 0xb1, 0xae, 0xf4, 0x04,
-    0x56, 0x0d, 0x32, 0xc0, 0xb6, 0xe3, 0xd9, 0x56
-};*/
-
 // Size is max message length + 2
+// PROBLEM CASES: KN; KK; IK
 static uint8_t message[65535 + 2];
 static int test_number = 1000;
-static char extra_front[4][5] = {"KN", "pqKN", "KX", "pqKX"};
-static char extra_receive_back[5][5] = {"NK", "pqNK","IK", "pqIK", "pqXK"};
-static char extra_send_back[5][5] = {"XN", "XX", "pqNX", "pqKX", "pqIX"};
-static char send_key[8][5] = {"NK", "XK", "KK", "IK", "pqNK", "pqXK", "pqKK", "pqIK"};
-static char to_test[24][5] = {"NN", "pqNN", "NX", "pqNX", "NK", "pqNK", "XN", "pqXN", "XX", "pqXX", "XK", "pqXK",
-				    "KN", "pqKN", "KX", "pqKX", "KK", "pqKK", "IN", "pqIN", "IX", "pqIX", "IK", "pqIK"};
-static const char to_test_full_name[24][40] = {"Noise_NN_25519_ChaChaPoly_BLAKE2s", "Noise_pqNN_Kyber512_ChaChaPoly_BLAKE2s",
-				 	       "Noise_NX_25519_ChaChaPoly_BLAKE2s", "Noise_pqNX_Kyber512_ChaChaPoly_BLAKE2s",
-				 	       "Noise_NK_25519_ChaChaPoly_BLAKE2s", "Noise_pqNK_Kyber512_ChaChaPoly_BLAKE2s",
-				 	       "Noise_XN_25519_ChaChaPoly_BLAKE2s", "Noise_pqXN_Kyber512_ChaChaPoly_BLAKE2s",
-				 	       "Noise_XX_25519_ChaChaPoly_BLAKE2s", "Noise_pqXX_Kyber512_ChaChaPoly_BLAKE2s",
-				 	       "Noise_XK_25519_ChaChaPoly_BLAKE2s", "Noise_pqXK_Kyber512_ChaChaPoly_BLAKE2s",
-				 	       "Noise_KN_25519_ChaChaPoly_BLAKE2s", "Noise_pqKN_Kyber512_ChaChaPoly_BLAKE2s",
-				 	       "Noise_KX_25519_ChaChaPoly_BLAKE2s", "Noise_pqKX_Kyber512_ChaChaPoly_BLAKE2s",
-				 	       "Noise_KK_25519_ChaChaPoly_BLAKE2s", "Noise_pqKK_Kyber512_ChaChaPoly_BLAKE2s",
-				 	       "Noise_IN_25519_ChaChaPoly_BLAKE2s", "Noise_pqIN_Kyber512_ChaChaPoly_BLAKE2s",
-				 	       "Noise_IX_25519_ChaChaPoly_BLAKE2s", "Noise_pqIX_Kyber512_ChaChaPoly_BLAKE2s",
-				 	       "Noise_IK_25519_ChaChaPoly_BLAKE2s", "Noise_pqIK_Kyber512_ChaChaPoly_BLAKE2s"};
+static char extra_send_front[3][6] = {"KNhyb", "KXhyb", "KKhyb"};
+static char extra_send_mid[2][6] = {"KNhyb", "KXhyb"};
+static char extra_receive_front[4][6] = {"NKhyb", "XKhyb", "IKhyb", "KKhyb"};
+static char extra_receive_back[3][6] = {"NKhyb", "IKhyb", "XKhyb"};
+static char extra_send_back[3][6] = {"NXhyb", "KXhyb", "IXhyb"};
+static char send_key[4][6] = {"NKhyb", "XKhyb", "IKhyb", "KKhyb"};
+static char to_test[12][6] = {"NNhyb", "NXhyb", "NKhyb", "XNhyb", "XXhyb", "XKhyb", "KNhyb", "KXhyb", "KKhyb", "INhyb", "IXhyb", "IKhyb"};
+static const char to_test_full_name[12][50] = {"Noise_NNhyb_25519+Kyber512_ChaChaPoly_BLAKE2s",
+				 	       "Noise_NXhyb_25519+Kyber512_ChaChaPoly_BLAKE2s", 
+				 	       "Noise_NKhyb_25519+Kyber512_ChaChaPoly_BLAKE2s", 
+				 	       "Noise_XNhyb_25519+Kyber512_ChaChaPoly_BLAKE2s",
+				 	       "Noise_XXhyb_25519+Kyber512_ChaChaPoly_BLAKE2s",
+				 	       "Noise_XKhyb_25519+Kyber512_ChaChaPoly_BLAKE2s",
+				 	       "Noise_KNhyb_25519+Kyber512_ChaChaPoly_BLAKE2s",
+				 	       "Noise_KXhyb_25519+Kyber512_ChaChaPoly_BLAKE2s", 
+				 	       "Noise_KKhyb_25519+Kyber512_ChaChaPoly_BLAKE2s",
+				 	       "Noise_INhyb_25519+Kyber512_ChaChaPoly_BLAKE2s",
+				 	       "Noise_IXhyb_25519+Kyber512_ChaChaPoly_BLAKE2s",
+				 	       "Noise_IKhyb_25519+Kyber512_ChaChaPoly_BLAKE2s"};
 
 int64_t get_cpucycles()
 { // Access system counter for benchmarking
@@ -73,21 +61,30 @@ int in_list(int place, int index){
 	char* elem = to_test[index];
 	int res = 0;
 	if(place == 0){
-		for(int i = 0; i < 4; i++){
-			res = max(!strcmp(extra_front[i], elem), res);
+		for(int i = 0; i < 3; i++){
+			res = max(!strcmp(extra_send_front[i], elem), res);
 		}
 	} else if (place == 1){
-		for(int i = 0; i < 5; i++){
+		for(int i = 0; i < 3; i++){
 			//printf("What we have: %s, what we check for: %s\n", elem, extra_send_back[i]);
 			res = max(!strcmp(extra_send_back[i], elem), res);
 		}
 	} else if (place == 2){
-		for(int i = 0; i < 5; i++){
+		for(int i = 0; i < 3; i++){
 			res = max(!strcmp(extra_receive_back[i], elem), res);
 		}
-	} else {
-		for(int i = 0; i < 8; i++){
+	} else if (place == 3){
+		for(int i = 0; i < 4; i++){
 			res = max(!strcmp(send_key[i], elem), res);
+		}
+	} else if (place == 4){
+		for(int i = 0; i < 4; i++){
+			res = max(!strcmp(extra_receive_front[i], elem), res);
+		}
+	}
+	else if (place == 5){
+		for(int i = 0; i < 2; i++){
+			res = max(!strcmp(extra_send_mid[i], elem), res);
 		}
 	}
 	return res;
@@ -98,7 +95,7 @@ int main(int argc, char *argv[])
 {
     NoiseDHState *dh;
     NoiseHandshakeState *handshake;
-    int err, action, key_size, socket_desc , new_socket , c, started;
+    int err, action, key_size, socket_desc , new_socket , c, started, hyb_key_size;
     struct sockaddr_in server , client;
     NoiseBuffer mbuf;
     size_t message_size, received, full_size;
@@ -144,13 +141,10 @@ int main(int argc, char *argv[])
     }
     
     // Go through the list of handshake names and run them all.
-    for(int k = 0; k < 24; k++){
+    for(int k = 0; k < 12; k++){
     	// Set the correct key size, the regular handshakes are at even positions in the list while the pq ones are not.
-	if(k%2 == 0){
-		key_size = 32;
-	} else {
-	    	key_size = 800;
-	}
+	key_size = 32;
+	hyb_key_size = 800;
     	
     	total_time = 0;
         total_time_comp = 0;
@@ -191,6 +185,29 @@ int main(int argc, char *argv[])
 				break;
 			}
 		}
+		
+		/*Receive the clients static hybrid public key, and set the remote public key.*/
+		if (noise_handshakestate_needs_remote_hybrid_public_key(handshake)){
+			int rec = recv(new_socket, message, hyb_key_size, 0);
+			if (rec < 0) {
+			    	puts("Error on receiving the public key");
+			}
+			dh = noise_handshakestate_get_remote_hybrid_public_key_dh(handshake);
+			err = noise_dhstate_set_public_key(dh, message, hyb_key_size);
+			if (err != NOISE_ERROR_NONE) {
+			    	noise_perror("set server public key", err);
+				return 1;
+			}
+		}
+		
+		// To avoid the client sending two messages back to back
+		if(in_list(5, k)){
+			message[0] = 0;
+			if (send(new_socket , message , 1 , 0) < 0) {
+				puts("Error on 1 bit receive, client");
+				break;
+			}
+		}
 			
 		/*Generate a new static keypair for the server*/
 		if (noise_handshakestate_needs_local_keypair(handshake)){
@@ -202,7 +219,7 @@ int main(int argc, char *argv[])
 			}
 		}
 		
-		/*Send the generated static public key to the client, cause I don't want to hardcode an 800 byte key*/
+		/*Send the generated static public key to the client*/
 		if(in_list(3, k)){
 			err = noise_dhstate_get_public_key(dh, message, key_size);
 			if (err != NOISE_ERROR_NONE) {
@@ -210,6 +227,41 @@ int main(int argc, char *argv[])
 			    return 1;
 			}
 			int sent = send(new_socket, message, key_size, 0);
+			if (sent < 0) {
+			    	puts("Error on receiving the public key");
+			}
+		}
+		
+		// To avoid the server sending two messages back to back
+		if(in_list(4, k)){
+			message_size = recv(new_socket, message , sizeof(message) , 0);
+			if(message_size != 1){
+				puts("Error on 1 bit receive, server");
+			    	break;
+			}
+		}
+		
+		/*Create own hybrid static key*/
+		if (noise_handshakestate_needs_local_hybrid_keypair(handshake)){
+			dh = noise_handshakestate_get_local_hybrid_keypair_dh(handshake);
+			//start2 = get_cpucycles();
+			err = noise_dhstate_generate_keypair(dh);
+			//stop2 = get_cpucycles();
+			//printf("Time taken to create static key: %ld cycles.\n", stop2 - start2);
+			if (err != NOISE_ERROR_NONE) {
+			    noise_perror("Generate key", err);
+			    return 1;
+			}
+		}
+		
+		/*Send client own hybrid public key*/
+		if(in_list(3, k)){
+			err = noise_dhstate_get_public_key(dh, message, hyb_key_size);
+			if (err != NOISE_ERROR_NONE) {
+			    noise_perror("Get public key", err);
+			    return 1;
+			}
+			int sent = send(new_socket, message, hyb_key_size, 0);
 			if (sent < 0) {
 			    	puts("Error on receiving the public key");
 			}
@@ -368,7 +420,7 @@ int main(int argc, char *argv[])
 	float comp_percent = ((float) total_time_comp) / ((float) total_time) * 100;
         qsort(results, sizeof(results)/sizeof(*results), sizeof(*results), comp);
         if(k % 2 == 0){
-		printf("\\hline\\hline \n");
+		printf("\\hline \n");
 	}
 	printf("%s & %5.1f & %5.1f & %5.1f & %5.1f & %5.2f & %5.2f \\\\ \n", to_test[k], (total_time/test_number)/1000000.0, results[500]/1000000.0, max/1000000.0, min/1000000.0, (total_time_comp/test_number)/1000000.0, comp_percent);
 	if(k % 2 == 0){

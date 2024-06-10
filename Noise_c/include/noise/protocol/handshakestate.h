@@ -42,8 +42,12 @@ int noise_handshakestate_get_protocol_id
     (const NoiseHandshakeState *state, NoiseProtocolId *id);
 NoiseDHState *noise_handshakestate_get_local_keypair_dh
     (const NoiseHandshakeState *state);
+NoiseDHState *noise_handshakestate_get_local_hybrid_keypair_dh
+        (const NoiseHandshakeState *state);
 NoiseDHState *noise_handshakestate_get_remote_public_key_dh
     (const NoiseHandshakeState *state);
+NoiseDHState *noise_handshakestate_get_remote_hybrid_public_key_dh
+        (const NoiseHandshakeState *state);
 NoiseDHState *noise_handshakestate_get_fixed_ephemeral_dh
     (NoiseHandshakeState *state);
 NoiseDHState *noise_handshakestate_get_fixed_hybrid_dh
@@ -55,9 +59,13 @@ int noise_handshakestate_set_pre_shared_key
 int noise_handshakestate_set_prologue
     (NoiseHandshakeState *state, const void *prologue, size_t prologue_len);
 int noise_handshakestate_needs_local_keypair(const NoiseHandshakeState *state);
+int noise_handshakestate_needs_local_hybrid_keypair(const NoiseHandshakeState *state);
 int noise_handshakestate_has_local_keypair(const NoiseHandshakeState *state);
+int noise_handshakestate_has_local_hybrid_keypair(const NoiseHandshakeState *state);
 int noise_handshakestate_needs_remote_public_key(const NoiseHandshakeState *state);
+int noise_handshakestate_needs_remote_hybrid_public_key(const NoiseHandshakeState *state);
 int noise_handshakestate_has_remote_public_key(const NoiseHandshakeState *state);
+int noise_handshakestate_has_remote_hybrid_public_key(const NoiseHandshakeState *state);
 int noise_handshakestate_start(NoiseHandshakeState *state);
 int noise_handshakestate_fallback(NoiseHandshakeState *state);
 int noise_handshakestate_fallback_to(NoiseHandshakeState *state, int pattern_id);

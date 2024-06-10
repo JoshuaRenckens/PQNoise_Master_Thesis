@@ -1564,6 +1564,437 @@ static uint8_t const noise_pattern_IX_PQ[] = {
         NOISE_TOKEN_END
 };
 
+/* Hybrid Patterns, combination of the regular and PQNoise patterns */
+/* Note: Currently no seperate "Remote/Local required" flags for the hybrid static key, if they are set it is assumed
+ * that both regular+hybrid keys are needed for the hybrid patterns. So the user will have to make sure both get set
+ * in that case.*/
+/**
+ * \brief Token sequence for handshake pattern "NNhyb".
+ *
+ * @code
+ * Noise_NN():
+ *   -> e, eh
+ *   <- e, ee, ekemh
+ * @endcode
+ */
+static uint8_t const noise_pattern_NNhyb[] = {
+        FLAGS(
+                NOISE_PAT_FLAG_LOCAL_EPHEMERAL |
+                NOISE_PAT_FLAG_LOCAL_HYBRID |
+                NOISE_PAT_FLAG_REMOTE_EPHEMERAL
+        ),
+
+        NOISE_TOKEN_E,
+        NOISE_TOKEN_EH,
+        NOISE_TOKEN_FLIP_DIR,
+        NOISE_TOKEN_E,
+        NOISE_TOKEN_EE,
+        NOISE_TOKEN_EKEMH,
+        NOISE_TOKEN_END
+};
+
+/**
+ * \brief Token sequence for handshake pattern "NKhyb".
+ *
+ * @code
+ * Noise_NK(rs):
+ *   <- s, sh
+ *   ...
+ *   -> e, es, skemh, eh
+ *   <- e, ee, ekemh
+ * @endcode
+ */
+static uint8_t const noise_pattern_NKhyb[] = {
+        FLAGS(
+                NOISE_PAT_FLAG_LOCAL_EPHEMERAL |
+                NOISE_PAT_FLAG_LOCAL_HYBRID |
+                NOISE_PAT_FLAG_REMOTE_STATIC |
+                NOISE_PAT_FLAG_REMOTE_HYBRID_STATIC |
+                NOISE_PAT_FLAG_REMOTE_EPHEMERAL |
+                NOISE_PAT_FLAG_REMOTE_REQUIRED
+        ),
+
+        NOISE_TOKEN_E,
+        NOISE_TOKEN_SKEMH,
+        NOISE_TOKEN_EH,
+        NOISE_TOKEN_FLIP_DIR,
+        NOISE_TOKEN_E,
+        NOISE_TOKEN_EE,
+        NOISE_TOKEN_EKEMH,
+        NOISE_TOKEN_END
+};
+
+/**
+ * \brief Token sequence for handshake pattern "NXhyb".
+ *
+ * @code
+ * Noise_NX(rs):
+ *   -> e, eh
+ *   <- e, ee, ekemh, s, es, sh
+ *   -> skemh
+ * @endcode
+ */
+static uint8_t const noise_pattern_NXhyb[] = {
+        FLAGS(
+                NOISE_PAT_FLAG_LOCAL_EPHEMERAL |
+                NOISE_PAT_FLAG_LOCAL_HYBRID |
+                NOISE_PAT_FLAG_REMOTE_STATIC |
+                NOISE_PAT_FLAG_REMOTE_EPHEMERAL |
+                NOISE_PAT_FLAG_REMOTE_HYBRID_STATIC
+        ),
+
+        NOISE_TOKEN_E,
+        NOISE_TOKEN_EH,
+        NOISE_TOKEN_FLIP_DIR,
+        NOISE_TOKEN_E,
+        NOISE_TOKEN_EE,
+        NOISE_TOKEN_EKEMH,
+        NOISE_TOKEN_S,
+        NOISE_TOKEN_ES,
+        NOISE_TOKEN_SH,
+        NOISE_TOKEN_FLIP_DIR,
+        NOISE_TOKEN_SKEMH,
+        NOISE_TOKEN_END
+};
+
+/**
+ * \brief Token sequence for handshake pattern "XNhyb".
+ *
+ * @code
+ * Noise_XN(s):
+ *   -> e, eh
+ *   <- e, ee, ekemh
+ *   -> s, se, sh
+ *   <- skemh
+ * @endcode
+ */
+static uint8_t const noise_pattern_XNhyb[] = {
+        FLAGS(
+                NOISE_PAT_FLAG_LOCAL_STATIC |
+                NOISE_PAT_FLAG_LOCAL_EPHEMERAL |
+                NOISE_PAT_FLAG_LOCAL_HYBRID |
+                NOISE_PAT_FLAG_LOCAL_HYBRID_STATIC |
+                NOISE_PAT_FLAG_REMOTE_EPHEMERAL
+        ),
+
+        NOISE_TOKEN_E,
+        NOISE_TOKEN_EH,
+        NOISE_TOKEN_FLIP_DIR,
+        NOISE_TOKEN_E,
+        NOISE_TOKEN_EE,
+        NOISE_TOKEN_EKEMH,
+        NOISE_TOKEN_FLIP_DIR,
+        NOISE_TOKEN_S,
+        NOISE_TOKEN_SE,
+        NOISE_TOKEN_SH,
+        NOISE_TOKEN_FLIP_DIR,
+        NOISE_TOKEN_SKEMH,
+        NOISE_TOKEN_END
+};
+
+/**
+ * \brief Token sequence for handshake pattern "XKhyb".
+ *
+ * @code
+ * Noise_XK(s, rs):
+ *   <- s, sh
+ *   ...
+ *   -> e, es, skemh, eh
+ *   <- e, ee, ekemh
+ *   -> s, se, sh
+ *   <- skemh
+ * @endcode
+ */
+static uint8_t const noise_pattern_XKhyb[] = {
+        FLAGS(
+                NOISE_PAT_FLAG_LOCAL_STATIC |
+                NOISE_PAT_FLAG_LOCAL_EPHEMERAL |
+                NOISE_PAT_FLAG_LOCAL_HYBRID_STATIC |
+                NOISE_PAT_FLAG_LOCAL_HYBRID |
+                NOISE_PAT_FLAG_REMOTE_EPHEMERAL |
+                NOISE_PAT_FLAG_REMOTE_STATIC |
+                NOISE_PAT_FLAG_REMOTE_HYBRID_STATIC |
+                NOISE_PAT_FLAG_REMOTE_REQUIRED
+        ),
+
+        NOISE_TOKEN_E,
+        NOISE_TOKEN_ES,
+        NOISE_TOKEN_SKEMH,
+        NOISE_TOKEN_EH,
+        NOISE_TOKEN_FLIP_DIR,
+        NOISE_TOKEN_E,
+        NOISE_TOKEN_EE,
+        NOISE_TOKEN_EKEMH,
+        NOISE_TOKEN_FLIP_DIR,
+        NOISE_TOKEN_S,
+        NOISE_TOKEN_SE,
+        NOISE_TOKEN_SH,
+        NOISE_TOKEN_FLIP_DIR,
+        NOISE_TOKEN_SKEMH,
+        NOISE_TOKEN_END
+};
+
+/**
+ * \brief Token sequence for handshake pattern "XXhyb".
+ *
+ * @code
+ * Noise_XX(s, rs):
+ *   -> e, eh
+ *   <- e, ee, ekemh, s, es, sh
+ *   -> s, se, skemh, sh
+ *   <- skemh
+ * @endcode
+ */
+static uint8_t const noise_pattern_XXhyb[] = {
+        FLAGS(
+                NOISE_PAT_FLAG_LOCAL_STATIC |
+                NOISE_PAT_FLAG_LOCAL_EPHEMERAL |
+                NOISE_PAT_FLAG_LOCAL_HYBRID_STATIC |
+                NOISE_PAT_FLAG_LOCAL_HYBRID |
+                NOISE_PAT_FLAG_REMOTE_EPHEMERAL |
+                NOISE_PAT_FLAG_REMOTE_STATIC |
+                NOISE_PAT_FLAG_REMOTE_HYBRID_STATIC
+        ),
+
+        NOISE_TOKEN_E,
+        NOISE_TOKEN_EH,
+        NOISE_TOKEN_FLIP_DIR,
+        NOISE_TOKEN_E,
+        NOISE_TOKEN_EE,
+        NOISE_TOKEN_EKEMH,
+        NOISE_TOKEN_S,
+        NOISE_TOKEN_ES,
+        NOISE_TOKEN_SH,
+        NOISE_TOKEN_FLIP_DIR,
+        NOISE_TOKEN_S,
+        NOISE_TOKEN_SE,
+        NOISE_TOKEN_SKEMH,
+        NOISE_TOKEN_SH,
+        NOISE_TOKEN_FLIP_DIR,
+        NOISE_TOKEN_SKEMH,
+        NOISE_TOKEN_END
+};
+
+/**
+ * \brief Token sequence for handshake pattern "KNhyb".
+ *
+ * @code
+ * Noise_KN(s):
+ *   -> s, sh
+ *   ...
+ *   -> e, eh
+ *   <- e, ee, se, ekemh, skemh
+ * @endcode
+ */
+static uint8_t const noise_pattern_KNhyb[] = {
+        FLAGS(
+                NOISE_PAT_FLAG_LOCAL_STATIC |
+                NOISE_PAT_FLAG_LOCAL_EPHEMERAL |
+                NOISE_PAT_FLAG_LOCAL_HYBRID |
+                NOISE_PAT_FLAG_LOCAL_HYBRID_STATIC |
+                NOISE_PAT_FLAG_LOCAL_REQUIRED |
+                NOISE_PAT_FLAG_REMOTE_EPHEMERAL
+        ),
+
+        NOISE_TOKEN_E,
+        NOISE_TOKEN_EH,
+        NOISE_TOKEN_FLIP_DIR,
+        NOISE_TOKEN_E,
+        NOISE_TOKEN_EE,
+        NOISE_TOKEN_SE,
+        NOISE_TOKEN_EKEMH,
+        NOISE_TOKEN_SKEMH,
+        NOISE_TOKEN_END
+};
+
+/**
+ * \brief Token sequence for handshake pattern "KKhyb".
+ *
+ * @code
+ * Noise_KK(s, rs):
+ *   -> s, sh
+ *   <- s, sh
+ *   ...
+ *   -> e, skemh, eh, es, ss
+ *   <- e, ee, ekemh, se, skemh
+ * @endcode
+ */
+static uint8_t const noise_pattern_KKhyb[] = {
+        FLAGS(
+                NOISE_PAT_FLAG_LOCAL_STATIC |
+                NOISE_PAT_FLAG_LOCAL_EPHEMERAL |
+                NOISE_PAT_FLAG_LOCAL_HYBRID |
+                NOISE_PAT_FLAG_LOCAL_HYBRID_STATIC |
+                NOISE_PAT_FLAG_LOCAL_REQUIRED |
+                NOISE_PAT_FLAG_REMOTE_STATIC |
+                NOISE_PAT_FLAG_REMOTE_EPHEMERAL |
+                NOISE_PAT_FLAG_REMOTE_HYBRID_STATIC |
+                NOISE_PAT_FLAG_REMOTE_REQUIRED
+        ),
+
+        NOISE_TOKEN_E,
+        NOISE_TOKEN_SKEMH,
+        NOISE_TOKEN_EH,
+        NOISE_TOKEN_ES,
+        NOISE_TOKEN_SS,
+        NOISE_TOKEN_FLIP_DIR,
+        NOISE_TOKEN_E,
+        NOISE_TOKEN_EE,
+        NOISE_TOKEN_EKEMH,
+        NOISE_TOKEN_SE,
+        NOISE_TOKEN_SKEMH,
+        NOISE_TOKEN_END
+};
+
+/**
+ * \brief Token sequence for handshake pattern "KXhyb".
+ *
+ * @code
+ * Noise_KX(s, rs):
+ *   -> s, sh
+ *   ...
+ *   -> e, eh
+ *   <- e, ee, ekemh, se, s, es skemh, sh
+ *   -> skemh
+ * @endcode
+ */
+static uint8_t const noise_pattern_KXhyb[] = {
+        FLAGS(
+                NOISE_PAT_FLAG_LOCAL_STATIC |
+                NOISE_PAT_FLAG_LOCAL_EPHEMERAL |
+                NOISE_PAT_FLAG_LOCAL_HYBRID |
+                NOISE_PAT_FLAG_LOCAL_HYBRID_STATIC |
+                NOISE_PAT_FLAG_LOCAL_REQUIRED |
+                NOISE_PAT_FLAG_REMOTE_STATIC |
+                NOISE_PAT_FLAG_REMOTE_EPHEMERAL |
+                NOISE_PAT_FLAG_REMOTE_HYBRID_STATIC
+        ),
+
+        NOISE_TOKEN_E,
+        NOISE_TOKEN_EH,
+        NOISE_TOKEN_FLIP_DIR,
+        NOISE_TOKEN_E,
+        NOISE_TOKEN_EE,
+        NOISE_TOKEN_EKEMH,
+        NOISE_TOKEN_SE,
+        NOISE_TOKEN_S,
+        NOISE_TOKEN_ES,
+        NOISE_TOKEN_SKEMH,
+        NOISE_TOKEN_SH,
+        NOISE_TOKEN_FLIP_DIR,
+        NOISE_TOKEN_SKEMH,
+        NOISE_TOKEN_END
+};
+
+/**
+ * \brief Token sequence for handshake pattern "INhyb".
+ *
+ * @code
+ * Noise_IN(s):
+ *   -> e, eh, s, sh
+ *   <- e, ee, ekemh, se, skemh
+ * @endcode
+ */
+static uint8_t const noise_pattern_INhyb[] = {
+        FLAGS(
+                NOISE_PAT_FLAG_LOCAL_STATIC |
+                NOISE_PAT_FLAG_LOCAL_HYBRID_STATIC |
+                NOISE_PAT_FLAG_LOCAL_EPHEMERAL |
+                NOISE_PAT_FLAG_LOCAL_HYBRID |
+                NOISE_PAT_FLAG_REMOTE_EPHEMERAL
+        ),
+
+        NOISE_TOKEN_E,
+        NOISE_TOKEN_EH,
+        NOISE_TOKEN_S,
+        NOISE_TOKEN_SH,
+        NOISE_TOKEN_FLIP_DIR,
+        NOISE_TOKEN_E,
+        NOISE_TOKEN_EE,
+        NOISE_TOKEN_EKEMH,
+        NOISE_TOKEN_SE,
+        NOISE_TOKEN_SKEMH,
+        NOISE_TOKEN_END
+};
+
+/**
+ * \brief Token sequence for handshake pattern "IKhyb".
+ *
+ * @code
+ * Noise_IK(s, rs):
+ *   <- s, sh
+ *   ...
+ *   -> e, es, skemh, eh, s, ss, sh
+ *   <- e, ee, ekemh, se, skemh
+ * @endcode
+ */
+static uint8_t const noise_pattern_IKhyb[] = {
+        FLAGS(
+                NOISE_PAT_FLAG_LOCAL_STATIC |
+                NOISE_PAT_FLAG_LOCAL_HYBRID_STATIC |
+                NOISE_PAT_FLAG_LOCAL_EPHEMERAL |
+                NOISE_PAT_FLAG_LOCAL_HYBRID |
+                NOISE_PAT_FLAG_REMOTE_STATIC |
+                NOISE_PAT_FLAG_REMOTE_HYBRID_STATIC |
+                NOISE_PAT_FLAG_REMOTE_EPHEMERAL |
+                NOISE_PAT_FLAG_REMOTE_REQUIRED
+        ),
+
+        NOISE_TOKEN_E,
+        NOISE_TOKEN_ES,
+        NOISE_TOKEN_SKEMH,
+        NOISE_TOKEN_EH,
+        NOISE_TOKEN_S,
+        NOISE_TOKEN_SS,
+        NOISE_TOKEN_SH,
+        NOISE_TOKEN_FLIP_DIR,
+        NOISE_TOKEN_E,
+        NOISE_TOKEN_EE,
+        NOISE_TOKEN_EKEMH,
+        NOISE_TOKEN_SE,
+        NOISE_TOKEN_SKEMH,
+        NOISE_TOKEN_END
+};
+
+/**
+ * \brief Token sequence for handshake pattern "IXhyb".
+ *
+ * @code
+ * Noise_IX(s, rs):
+ *   -> e, eh, s, sh
+ *   <- e, ee, ekemh, se, s, es, skemh, sh
+ *   -> skemh
+ * @endcode
+ */
+static uint8_t const noise_pattern_IXhyb[] = {
+        FLAGS(
+                NOISE_PAT_FLAG_LOCAL_STATIC |
+                NOISE_PAT_FLAG_LOCAL_HYBRID_STATIC |
+                NOISE_PAT_FLAG_LOCAL_EPHEMERAL |
+                NOISE_PAT_FLAG_LOCAL_HYBRID |
+                NOISE_PAT_FLAG_REMOTE_STATIC |
+                NOISE_PAT_FLAG_REMOTE_HYBRID_STATIC |
+                NOISE_PAT_FLAG_REMOTE_EPHEMERAL
+        ),
+
+        NOISE_TOKEN_E,
+        NOISE_TOKEN_EH,
+        NOISE_TOKEN_S,
+        NOISE_TOKEN_SH,
+        NOISE_TOKEN_FLIP_DIR,
+        NOISE_TOKEN_E,
+        NOISE_TOKEN_EE,
+        NOISE_TOKEN_EKEMH,
+        NOISE_TOKEN_SE,
+        NOISE_TOKEN_S,
+        NOISE_TOKEN_ES,
+        NOISE_TOKEN_SKEMH,
+        NOISE_TOKEN_SH,
+        NOISE_TOKEN_FLIP_DIR,
+        NOISE_TOKEN_SKEMH,
+        NOISE_TOKEN_END
+};
+
 /**
  * \brief Looks up a specific handshake pattern.
  *
@@ -1630,6 +2061,18 @@ const uint8_t *noise_pattern_lookup(int id)
     case NOISE_PATTERN_IN_PQ:           return noise_pattern_IN_PQ;
     case NOISE_PATTERN_IK_PQ:           return noise_pattern_IK_PQ;
     case NOISE_PATTERN_IX_PQ:           return noise_pattern_IX_PQ;
+    case NOISE_PATTERN_NN_HYB:          return noise_pattern_NNhyb;
+    case NOISE_PATTERN_NK_HYB:          return noise_pattern_NKhyb;
+    case NOISE_PATTERN_NX_HYB:          return noise_pattern_NXhyb;
+    case NOISE_PATTERN_XN_HYB:          return noise_pattern_XNhyb;
+    case NOISE_PATTERN_XK_HYB:          return noise_pattern_XKhyb;
+    case NOISE_PATTERN_XX_HYB:          return noise_pattern_XXhyb;
+    case NOISE_PATTERN_KN_HYB:          return noise_pattern_KNhyb;
+    case NOISE_PATTERN_KK_HYB:          return noise_pattern_KKhyb;
+    case NOISE_PATTERN_KX_HYB:          return noise_pattern_KXhyb;
+    case NOISE_PATTERN_IN_HYB:          return noise_pattern_INhyb;
+    case NOISE_PATTERN_IK_HYB:          return noise_pattern_IKhyb;
+    case NOISE_PATTERN_IX_HYB:          return noise_pattern_IXhyb;
     default:                            return 0;
     }
 }

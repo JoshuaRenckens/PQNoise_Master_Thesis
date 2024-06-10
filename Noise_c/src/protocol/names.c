@@ -124,6 +124,18 @@ static NoiseIdMapping const algorithm_names[] = {
     {NOISE_PATTERN_IN_PQ,       "pqIN",          4},
     {NOISE_PATTERN_IK_PQ,       "pqIK",          4},
     {NOISE_PATTERN_IX_PQ,       "pqIX",          4},
+    {NOISE_PATTERN_NN_HYB,      "NNhyb",         5},
+    {NOISE_PATTERN_NK_HYB,      "NKhyb",         5},
+    {NOISE_PATTERN_NX_HYB,      "NXhyb",         5},
+    {NOISE_PATTERN_XN_HYB,      "XNhyb",         5},
+    {NOISE_PATTERN_XK_HYB,      "XKhyb",         5},
+    {NOISE_PATTERN_XX_HYB,      "XXhyb",         5},
+    {NOISE_PATTERN_KN_HYB,      "KNhyb",         5},
+    {NOISE_PATTERN_KK_HYB,      "KKhyb",         5},
+    {NOISE_PATTERN_KX_HYB,      "KXhyb",         5},
+    {NOISE_PATTERN_IN_HYB,      "INhyb",         5},
+    {NOISE_PATTERN_IK_HYB,      "IKhyb",         5},
+    {NOISE_PATTERN_IX_HYB,      "IXhyb",         5},
 
     /* Protocol name prefixes */
     {NOISE_PREFIX_STANDARD,     "Noise",         5},

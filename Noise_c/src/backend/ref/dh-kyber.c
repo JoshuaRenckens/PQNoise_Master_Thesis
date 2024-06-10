@@ -80,8 +80,8 @@ static int noise_kyber_calculate
          const NoiseDHState *public_key_state,
          uint8_t *shared_key)
 {
-    /*Nothing to do here*/
-    return NOISE_ERROR_NONE;
+    /*This function should not be called with kyber*/
+    return NOISE_ERROR_INVALID_STATE;
 }
 
 static int noise_kyber_encapsulate
