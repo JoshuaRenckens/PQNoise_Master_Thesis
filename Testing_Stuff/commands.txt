@@ -19,9 +19,9 @@ gcc -Wall -g noise_c_PQ_client.c -I ../../Noise_c/include/ -L ../../Noise_c/src/
 Build command for the disco example in the Testing_Stuff/Disco folder, they don't work for some reason: (These are copies of the ones I added to the Embedded_Disco/tests folder, the ones in the Embedded_Disco/tests can be built using the Embedded_Disco make file and work).
 
 Needed to remove fsanitize in the make file of disco, ran into issues with libasan otherwise. -loqs is needed to include the OQS library to use their Kyber implementation.
-(These ones don't currently work)
-gcc -Wall -g pq_test_server.c -I ../../Embedded_Disco/lib/ -L ../../Embedded_Disco/ -l:disco.so -o disco_server -loqs
-gcc -Wall -g pq_test_client.c -I ../../Embedded_Disco/lib/ -L ../../Embedded_Disco/ -l:disco.so -o disco_client -loqs
+These commands need disco to be built as a static library in the Embedded_Disco server, a command to do so has been added to the Makefile in the EmbeddedDisco folder, so simply running "make disco.a" in there should do the trick.
+gcc -Wall -g pq_test_server.c -I ../../Embedded_Disco/lib/ -L ../../Embedded_Disco/ -ldisco -o disco_server -loqs
+gcc -Wall -g pq_test_client.c -I ../../Embedded_Disco/lib/ -L ../../Embedded_Disco/ -ldisco -o disco_client -loqs
 
 Since it is not installed, we need to export the Library before using it
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:../../Embedded_Disco
@@ -80,6 +80,14 @@ sudo cpupower frequency-set --governor performance
 
 Run namespace setup (In the folder above the client and server files):
 sudo sh setup_namespaces.sh
+
+***OPTIONAL***
+Commands to run wireshark on the namespace to record traffic, when running this command srv_ns will be listed in the wireshark graphical interface, simply click it and start the capture:
+sudo ip netns exec cli_ns wireshark
+
+To change permission of the resulting .pcapng file, since it saves with root privileges due to being run as sudo, simply run:
+sudo chmod 777 file_name
+******
 
 Commands to run in the namespaces:
 sudo ip netns exec srv_ns ./server

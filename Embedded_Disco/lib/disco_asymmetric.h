@@ -91,7 +91,6 @@ typedef struct handshakeState_ {
 
   pqkeyPair pq_s;
   pqkeyPair pq_e;
-  // TODO: no need for the privatekey part of these keyPairs, takes space
   pqkeyPair pq_rs;
   pqkeyPair pq_re;
 

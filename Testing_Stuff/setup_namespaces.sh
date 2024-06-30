@@ -85,7 +85,7 @@ ip netns exec ${CLIENT_NS} \
       root netem \
            limit 1000 \
            loss 0% \
-           delay 0.24ms \
+           delay 2.684ms \
            rate 1000mbit
 
 ip netns exec ${SERVER_NS} \
@@ -94,7 +94,7 @@ ip netns exec ${SERVER_NS} \
       root netem \
            limit 1000 \
            loss 0% \
-           delay 0.24ms \
+           delay 2.684ms \
            rate 1000mbit
       
       

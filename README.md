@@ -73,16 +73,16 @@ Added -loqs to the LDADD variable in the **Makefile.am** file in the following f
 
 **handshake_patterns.py**: Added the PQNoise handshakes to have the python program generate the token strings for the patterns correctly.  
 
-**disco_asymmetric.h**: Added the generated token strings for the PQNoise patterns as well as a function, generate_pqKeyPair, to generate kyber keypairs. Also added additional arguments for the 		 disco_Initialize function, which are just the possible PQNoise keys you may have.  
+**disco_asymmetric.h**: Added the generated token strings for the PQNoise patterns as well as a function, generate_pqKeyPair, to generate kyber keypairs. Added additional arguments for the disco_Initialize function, which are just the possible PQNoise keys you may have. Added keypair variables for the post quantum keys in the handshakestate struct.
 	
 **disco_asymmetric.c**: Added the token strings for the new PQNoise tokens, EKEM and SKEM. Changed the disco_Initialize and added the generate_pqKeyPair function as already explained for the .h file, the disco_initialize function also needed extra cases for when the pre-send symmetric keys were PQ keys. Added PQ key cases for the E and S token cases in the write and read functions, in those same functions I also added the cases for the SKEM and EKEM tokens.  
 
-**Makefile**: Added commands nk_example and pq_example, which build an executable client and server file. This was just to test the regular nk handshake as well as the post quantum nk handshake on one pc.  
+**Makefile**: Added commands nk_example and pq_example, which build an executable client and server file. This was just to test the regular nk handshake as well as the post quantum nk handshake on one pc. Also added the a command to make a libdisco.a static library, which makes it easier to run the full tests from the Testing_Stuff folder, simply run "make disco.a" to generate the static library file.
 
 
 ## Building
 
-Both noise-c and embedded disco can be build in the same way as they would normally be, so their respective README.md files should have the correct instructions.  
+Both noise-c and embedded disco can be build in the same way as they would normally be, so their respective README.md files should have the correct instructions, though if you wish to run the tests you need to create a libdisco.a static library as mentioned above.  
 How to build the test files and how I used them is written in the commands.txt file in the Testing_Stuff folder, maybe I should rename both of those at some point.  
 
 

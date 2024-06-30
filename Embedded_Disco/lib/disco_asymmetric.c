@@ -143,8 +143,7 @@ void disco_generateKeyPair(keyPair *kp) {
 
 void generate_pqKeyPair(pqkeyPair *pqp, OQS_KEM* kem) {
     kem->keypair(pqp->pub, pqp->priv);
-    pqp->isSet = true;  // TODO: is this useful? If it is, should we use a magic
-    // number here in case it's not initialized to false?
+    pqp->isSet = true;
 }
 
 
@@ -249,7 +248,6 @@ void disco_Initialize(handshakeState *hs, const char *handshake_pattern,
       }
   } else {
       if (pq_s != NULL) {
-          // TODO: should we do assert(hs->s.isSet) ?
           hs->pq_s = *pq_s;
           hs->pq_s.isSet = true;
       } else {
@@ -378,7 +376,7 @@ bool disco_WriteMessage(handshakeState *hs, uint8_t *payload,
   // state machine
   const char *current_token = hs->message_patterns;
   while (true) {
-    printf("WRITE, Current token: %c\n", *current_token);
+    //printf("WRITE, Current token: %c\n", *current_token);
     switch (*current_token) {
       case token_e:
         if(!hs->is_pq) {
@@ -494,7 +492,7 @@ payload:
 
   // set length of what was written into buffer
   *message_len = p - message_buffer;
-  printf("message length when sent: %ld\n", *message_len);
+  //printf("message length when sent: %ld\n", *message_len);
 
   //
   return true;
@@ -534,7 +532,7 @@ bool disco_ReadMessage(handshakeState *hs, uint8_t *message, size_t message_len,
   // state machine
   const char *current_token = hs->message_patterns;
   while (true) {
-    printf("READ, Current token: %c\n", *current_token);
+    //printf("READ, Current token: %c\n", *current_token);
     switch (*current_token) {
       case token_e:
         if(!hs->is_pq){
@@ -648,7 +646,7 @@ bool disco_ReadMessage(handshakeState *hs, uint8_t *message, size_t message_len,
           if (message_len < ciphertext_len) {
               return false;
           }
-          printf("Ciphertext_len: %ld", ciphertext_len);
+          //printf("Ciphertext_len: %ld", ciphertext_len);
           bool res =
                   decryptAndHash(&(hs->symmetric_state), message, ciphertext_len);
           if (!res) {
@@ -676,7 +674,7 @@ payload:
   if (hs->symmetric_state.isKeyed && message_len < 16) {  // a tag must be here
     return false;
   }
-  printf("message_len: %ld\n", message_len);
+  //printf("message_len: %ld\n", message_len);
   bool res = decryptAndHash(&(hs->symmetric_state), message, message_len);
   if (!res) {
     puts("Stuff\n");

@@ -11,7 +11,10 @@ all: disco.so
 # make a library
 disco.so: disco_symmetric.o disco_asymmetric.o tweetstrobe.o tweetX25519.o randombytes.o
 	$(CC) $(CFLAGS) -shared disco_symmetric.o disco_asymmetric.o tweetstrobe.o tweetX25519.o randombytes.o -o disco.so
-
+	
+disco.a: disco_symmetric.o disco_asymmetric.o tweetstrobe.o tweetX25519.o randombytes.o
+	ar rcs libdisco.a disco_symmetric.o disco_asymmetric.o tweetstrobe.o tweetX25519.o randombytes.o
+	
 # Disco protocol
 disco_asymmetric.o: lib/disco_asymmetric.c lib/disco_asymmetric.h
 	$(CC) $(CFLAGS) lib/disco_asymmetric.c -c -o disco_asymmetric.o
