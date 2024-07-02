@@ -4,16 +4,6 @@
 #include <oqs/oqs.h>
 #include <time.h>
 
-uint64_t start, stop;
-
-int64_t cpucycles()
-{ // Access system counter for benchmarking
-    unsigned int hi, lo;
-
-    asm volatile ("rdtsc\n\t" : "=a" (lo), "=d"(hi));
-    return ((int64_t)lo) | (((int64_t)hi) << 32);
-}
-
 /*
  * Kyber stuff, should be put in a seperate file but I don't know how to change the makefile here
  * Currently missing the SEEC scheme when generating, only to be used in conjunction with the PQNoise patterns
@@ -34,9 +24,7 @@ static int noise_kyber_generate_keypair
         (NoiseDHState *state, const NoiseDHState *other)
 {
     NoiseKyberState *st = (NoiseKyberState *)state;
-    start = cpucycles();
     st->kem->keypair(st->public_key, st->private_key);
-    stop = cpucycles();
     return NOISE_ERROR_NONE;
 }
 
@@ -88,9 +76,7 @@ static int noise_kyber_encapsulate
         (const NoiseDHState *state, uint8_t *cipher, uint8_t *shared)
 {
     NoiseKyberState *st = (NoiseKyberState *)state;
-    start = cpucycles();
     st->kem->encaps(cipher, shared, st->public_key);
-    stop = cpucycles();
     return NOISE_ERROR_NONE;
 }
 
