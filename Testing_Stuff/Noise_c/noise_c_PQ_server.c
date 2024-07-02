@@ -6,7 +6,11 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+
 #include <time.h>
+
+#define NS_IN_MS 1000000.0
+#define MS_IN_S 1000
 
 
 // Size is max Noise message length + 2
@@ -32,10 +36,18 @@ static const char to_test_full_name[24][40] = {"Noise_NN_25519_ChaChaPoly_BLAKE2
 /*Access system counter for benchmarking*/
 int64_t get_cpucycles()
 {
-  unsigned int hi, lo;
-
-  asm volatile ("rdtsc\n\t" : "=a" (lo), "=d"(hi));
-  return ((int64_t)lo) | (((int64_t)hi) << 32);
+#if defined(__GNUC__) && defined(__ARM_ARCH_7A__)
+	// Case for the board
+        uint32_t r = 0;
+        asm volatile("mrc p15, 0, %0, c9, c13, 0" : "=r"(r) );
+        return r;
+#else
+	// Case for my laptop
+	unsigned int hi, lo;
+  
+  	asm volatile ("rdtsc\n\t" : "=a" (lo), "=d"(hi));
+  	return ((int64_t)lo) | (((int64_t)hi) << 32);
+#endif
 }
 
 int comp(const void* elem1, const void* elem2){
@@ -80,7 +92,10 @@ int main(int argc, char *argv[])
     
         uint64_t total_time, total_time_comp, max, min, current;
     	uint64_t results[test_number];
+    	double handshake_times_ms[test_number];
     	uint64_t start2, stop2, start3, stop3;
+    	
+    	struct timespec start, stop;
     
    	/*Prepare socket and start listening*/
     
@@ -218,7 +233,14 @@ int main(int argc, char *argv[])
 				    
 				    stop3 = get_cpucycles();
 				    //printf("Time taken to create next message: %ld cycles.\n", stop3 - start3);
-				    total_time_comp += stop3 - start3;
+				    current = stop3 - start3;
+				    
+				    // In case the cpu cycle counter overflowed, happens fairly regularly on the board.
+				    if(current > INT_MAX/2){
+				    	current = ~current;
+				    }
+			
+				    total_time_comp += current;
 				    
 				    if (err != NOISE_ERROR_NONE) {
 					noise_perror("write handshake", err);
@@ -276,6 +298,7 @@ int main(int argc, char *argv[])
 				    }
 				    // Start measuring the servers time after it received the first message
 				    if(!started){
+				    	clock_gettime(CLOCK_MONOTONIC_RAW, &start);
 				    	start2 = get_cpucycles();
 				    	started = 1;
 				    }
@@ -289,7 +312,14 @@ int main(int argc, char *argv[])
 				    //printf("Read, buffer size: %ld\n", mbuf.size);
 				    //printf("Received: %ld\n", received);
 				    //printf("Time taken to process the message: %ld cycles.\n", stop3 - start3);
-				    total_time_comp += stop3 - start3;
+				    current = stop3 - start3;
+				    
+				    // In case the cpu cycle counter overflowed, happens fairly regularly on the board.
+				    if(current > INT_MAX/2){
+				    	current = ~current;
+				    }
+			
+				    total_time_comp += current;
 				    
 				    if (err != NOISE_ERROR_NONE) {
 				    	//printf("Error value: %d \n", err);
@@ -303,7 +333,15 @@ int main(int argc, char *argv[])
 				}
 			}
 			stop2 = get_cpucycles();
+			clock_gettime(CLOCK_MONOTONIC_RAW, &stop);
+			
 			current = stop2 - start2;
+			
+			// In case the cpu cycle counter overflowed, happens fairly regularly on the board.
+			if(current > INT_MAX/2){
+				current = ~current;
+			}
+			
 			// One run to warm the cache where we won't include the time
 			if(i != 0){
 				total_time += current;
@@ -315,6 +353,7 @@ int main(int argc, char *argv[])
 					min = current;
 				}
 				results[i-1] = current;
+				handshake_times_ms[i-1] = ((stop.tv_sec - start.tv_sec) * MS_IN_S) + ((stop.tv_nsec - start.tv_nsec) / NS_IN_MS);
 			}
 			//printf("\nTime taken by run %d: %ld cycles.\n", i, current);
 			//printf("Current total time: %ld cycles.\n", total_time);
@@ -334,7 +373,7 @@ int main(int argc, char *argv[])
 		if(k % 2 == 0){
 			printf("\\hline\\hline \n");
 		}
-		printf("%s & %7.2f & %7.2f & %7.2f & %7.2f & %7.2f & %7.2f \\\\ \n", to_test[k], (total_time/test_number)/1000000.0, results[test_number/2]/1000000.0, max/1000000.0, min/1000000.0, (total_time_comp/test_number)/1000000.0, comp_percent);
+		printf("%s & %7.2f & %7.2f & %7.2f & %7.2f & %7.2f & %7.2f & %7.2f\\\\ \n", to_test[k], (total_time/test_number)/1000000.0, results[test_number/2]/1000000.0, max/1000000.0, min/1000000.0, (total_time_comp/test_number)/1000000.0, comp_percent, handshake_times_ms[test_number/2]);
 		if(k % 2 == 0){
 			printf("\\hline \n");
 		}
