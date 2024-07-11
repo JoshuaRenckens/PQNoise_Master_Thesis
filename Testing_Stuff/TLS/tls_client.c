@@ -3,6 +3,7 @@
 
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+#include <unistd.h>
 
 #include <time.h>
 
@@ -23,6 +24,12 @@ int64_t get_cpucycles()
 int comp(const void* elem1, const void* elem2){
 	int val1 = *((int*)elem1);
 	int val2 = *((int*)elem2);
+	return (val1 > val2) - (val1 < val2);
+}
+
+int comp2(const void* elem1, const void* elem2){
+	double val1 = *((double*)elem1);
+	double val2 = *((double*)elem2);
 	return (val1 > val2) - (val1 < val2);
 }
 
@@ -47,7 +54,7 @@ SSL* do_tls_handshake(SSL_CTX* ssl_ctx)
 
     SSL_set_bio(ssl, conn, conn);
 
-    /* ok, lets connect */
+    // ok, lets connect
     ret = SSL_connect(ssl);
     if (ret <= 0)
     {
@@ -63,6 +70,7 @@ int main(int argc, char* argv[])
 {
     uint64_t total_time = 0, max = 0, min = INT_MAX, current = 0;
     uint64_t results[test_number];
+    double results_ms[test_number];
     uint64_t start, stop;
     
     int ret = -1;
@@ -72,7 +80,7 @@ int main(int argc, char* argv[])
     const SSL_METHOD* ssl_meth = TLS_client_method();
     SSL* ssl = NULL;
 
-    //struct timespec start, finish;
+    struct timespec begin, finish;
 
     ssl_ctx = SSL_CTX_new(ssl_meth);
     if (!ssl_ctx)
@@ -117,11 +125,11 @@ int main(int argc, char* argv[])
     SSL_CTX_set_verify(ssl_ctx, SSL_VERIFY_PEER, NULL);
     
     for(int i = 0; i <= test_number; i++){
-	    //clock_gettime(CLOCK_MONOTONIC_RAW, &start);
+	    clock_gettime(CLOCK_MONOTONIC_RAW, &begin);
 	    start = get_cpucycles();
 	    ssl = do_tls_handshake(ssl_ctx);
 	    stop = get_cpucycles();
-	    //clock_gettime(CLOCK_MONOTONIC_RAW, &finish);
+	    clock_gettime(CLOCK_MONOTONIC_RAW, &finish);
 
 	    SSL_set_shutdown(ssl, SSL_SENT_SHUTDOWN | SSL_RECEIVED_SHUTDOWN);
 	    ret = BIO_closesocket(SSL_get_fd(ssl));
@@ -145,14 +153,14 @@ int main(int argc, char* argv[])
 			min = current;
 		}
 		results[i-1] = current;
+		results_ms[i-1] = ((finish.tv_sec - begin.tv_sec) * MS_IN_S) + ((finish.tv_nsec - begin.tv_nsec) / NS_IN_MS);
 	    }
-	    
-	    //printf("%f,", ((finish.tv_sec - start.tv_sec) * MS_IN_S) + ((finish.tv_nsec - start.tv_nsec) / NS_IN_MS));
 	    
     }
     
     qsort(results, sizeof(results)/sizeof(*results), sizeof(*results), comp);
-    printf("Kyber512 & %5.1f & %5.1f & %5.1f & %5.1f \\\\ \n", (total_time/test_number)/1000000.0, results[500]/1000000.0, max/1000000.0, min/1000000.0);
+    qsort(results_ms, sizeof(results_ms)/sizeof(*results_ms), sizeof(*results_ms), comp2);
+    printf("Kyber512 & %7.2f & %7.2f & %7.2f & %7.2f & %7.2f\\\\ \n", (total_time/test_number)/1000000.0, results[500]/1000000.0, max/1000000.0, min/1000000.0, results_ms[500]);
     
     ret = 0;
     goto end;

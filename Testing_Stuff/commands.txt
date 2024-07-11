@@ -4,10 +4,7 @@ Build and install liboqs, follow the steps on the github page.
 
 Set ld variable for liboqs, since we want to use the kyber implementation from there, otherwise the linker won't find it.
 
-Build instructions for disco work even after including the Kem stuff, only need to add -loqs for any example you build, command in Makefile is changed to build the Kem example as well.
 Build instructions for noise-c work exactly as before, some slight changes in the Makefile.am files were done to make sure of that.
-
-
 
 
 Build command for the noise_c example, in the Testing_Stuff/Noise-c folder: (-loqs necessary after the PQNoise stuff was added, might get removed later in favor of directly including kyber files)
@@ -15,21 +12,6 @@ Include noise_c as library, need to have it built as .a library, otherwise if bu
 gcc -Wall -g noise_c_PQ_server.c -I ../../Noise_c/include/ -L ../../Noise_c/src/protocol -lnoiseprotocol -o server -loqs
 gcc -Wall -g noise_c_PQ_client.c -I ../../Noise_c/include/ -L ../../Noise_c/src/protocol -lnoiseprotocol -o client -loqs
 
-
-Build command for the disco example in the Testing_Stuff/Disco folder, they don't work for some reason: (These are copies of the ones I added to the Embedded_Disco/tests folder, the ones in the Embedded_Disco/tests can be built using the Embedded_Disco make file and work).
-
-Needed to remove fsanitize in the make file of disco, ran into issues with libasan otherwise. -loqs is needed to include the OQS library to use their Kyber implementation.
-These commands need disco to be built as a static library in the Embedded_Disco server, a command to do so has been added to the Makefile in the EmbeddedDisco folder, so simply running "make disco.a" in there should do the trick.
-gcc -Wall -g pq_test_server.c -I ../../Embedded_Disco/lib/ -L ../../Embedded_Disco/ -ldisco -o disco_server -loqs
-gcc -Wall -g pq_test_client.c -I ../../Embedded_Disco/lib/ -L ../../Embedded_Disco/ -ldisco -o disco_client -loqs
-
-Since it is not installed, we need to export the Library before using it
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:../../Embedded_Disco
-
-
-
-Build command, for now, for the google benchmark example(Probably to be removed):
-g++  google_bench_test.cpp -std=c++11 -isystem ../../Noise_c/include/ -L../../Noise_c/src/protocol -lnoiseprotocol -lbenchmark -lpthread -o bench -loqs
 
 
 Reproducing the benchmarking for noise_c:
@@ -46,9 +28,10 @@ cat /sys/devices/system/cpu/intel_pstate/no_turbo
 Disable turbo boost on linux:
 echo "1" | sudo tee /sys/devices/system/cpu/intel_pstate/no_turbo
 
-Commands to install cpupower(if needed):
+***Commands to install cpupower(if needed)***
 sudo apt-get install -y linux-tools-common
 sudo apt install linux-tools-common linux-tools-`uname -r`
+*******
 
 Set cpugovernor to performance to disable cpu frequency scaling:
 sudo cpupower frequency-set --governor performance
@@ -58,9 +41,20 @@ cpupower frequency-info -o proc
 
 Run the server or client as follows:
 taskset -c 2 sudo nice -n -20 ./server
-taskset -c 2 sudo nice -n -20 ./client
+taskset -c 3 sudo nice -n -20 ./client
 
 taskset -c 2 will pin the program to core number 3, and sudo nice -n -20 will set the program to be highest priority (-20 to 19 with -20 being highest priority).
+
+
+!!! Information for the board:
+On the board I could not manage to install cpupower instead I had to use cpufreq with the following command to set all of the cpus to performance:
+sudo bash -c 'for ((i=0;i<$(nproc);i++)); do cpufreq-set -c $i -g performance; done'
+We can check with the following command whether it got set correctly:
+cpufreq-info
+
+The board does not have hyperthreading or an equivalent to turbo boost.
+
+
 
 
 
@@ -90,9 +84,13 @@ sudo chmod 777 file_name
 ******
 
 Commands to run in the namespaces:
-sudo ip netns exec srv_ns ./server
-sudo ip netns exec cli_ns ./client
+sudo ip netns exec srv_ns taskset -c 2 nice -n -20 ./server
+sudo ip netns exec cli_ns taskset -c 3 nice -n -20 ./client
 
+
+
+Board information:
+Overflow time for the cycle register: 2 seconds presumably
 
 
 

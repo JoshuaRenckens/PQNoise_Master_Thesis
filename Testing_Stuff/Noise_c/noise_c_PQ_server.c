@@ -16,8 +16,6 @@
 // Size is max Noise message length + 2
 static uint8_t message[65535 + 2];
 static int test_number = 1000;
-static char extra_front[4][5] = {"KN", "pqKN", "KX", "pqKX"};
-static char send_key[8][5] = {"NK", "XK", "KK", "IK", "pqNK", "pqXK", "pqKK", "pqIK"};
 static char to_test[24][5] = {"NN", "pqNN", "NX", "pqNX", "NK", "pqNK", "XN", "pqXN", "XX", "pqXX", "XK", "pqXK",
 				    "KN", "pqKN", "KX", "pqKX", "KK", "pqKK", "IN", "pqIN", "IX", "pqIX", "IK", "pqIK"};
 static const char to_test_full_name[24][40] = {"Noise_NN_25519_ChaChaPoly_BLAKE2s", "Noise_pqNN_Kyber512_ChaChaPoly_BLAKE2s",
@@ -33,7 +31,7 @@ static const char to_test_full_name[24][40] = {"Noise_NN_25519_ChaChaPoly_BLAKE2
 				 	       "Noise_IX_25519_ChaChaPoly_BLAKE2s", "Noise_pqIX_Kyber512_ChaChaPoly_BLAKE2s",
 				 	       "Noise_IK_25519_ChaChaPoly_BLAKE2s", "Noise_pqIK_Kyber512_ChaChaPoly_BLAKE2s"};
 
-/*Access system counter for benchmarking*/
+//Access system counter for benchmarking
 int64_t get_cpucycles()
 {
 #if defined(__GNUC__) && defined(__ARM_ARCH_7A__)
@@ -42,7 +40,7 @@ int64_t get_cpucycles()
         asm volatile("mrc p15, 0, %0, c9, c13, 0" : "=r"(r) );
         return r;
 #else
-	// Case for my laptop
+	// Case for my laptop (Intel cpu)
 	unsigned int hi, lo;
   
   	asm volatile ("rdtsc\n\t" : "=a" (lo), "=d"(hi));
@@ -56,6 +54,12 @@ int comp(const void* elem1, const void* elem2){
 	return (val1 > val2) - (val1 < val2);
 }
 
+int comp2(const void* elem1, const void* elem2){
+	double val1 = *((double*)elem1);
+	double val2 = *((double*)elem2);
+	return (val1 > val2) - (val1 < val2);
+}
+
 int max(int a, int b){
 	if(a > b){
 		return a;
@@ -64,20 +68,26 @@ int max(int a, int b){
 	}
 }
 
-/* Check if the current pattern is in one of the above lists. Need to check whether we have to send a static key, or also have to send a byte to space the clients messages. The byte thing is necessary for the "KN" and "KX" pattern as the client would send his static key and afterwards the first actual handshake message and for some reason sending those two messages in a row messes up the second message. */
-int in_list(int place, int index){
-	char* elem = to_test[index];
-	int res = 0;
-	if(place == 0){
-		for(int i = 0; i < 4; i++){
-			res = max(!strcmp(extra_front[i], elem), res);
-		}
-	} else if (place == 1){
-		for(int i = 0; i < 8; i++){
-			res = max(!strcmp(send_key[i], elem), res);
-		}
+
+int load_key(char *file, uint8_t *key, int size){
+	FILE *fp;
+	fp = fopen(file, "r");
+		
+	if(fp == NULL){
+		printf("Filaname: %s", file);
+		puts("Error opening file");
+		return 1;
 	}
-	return res;
+	
+	size_t read = fread(key, 1, size, fp);
+	
+	if(read != size){
+		puts("Wrong amount of bytes read");
+		return 1;
+	}
+	
+	fclose(fp);
+	return 0;
 }
 
 
@@ -95,23 +105,47 @@ int main(int argc, char *argv[])
     	double handshake_times_ms[test_number], overall_ms;
     	uint64_t start2, stop2, start3, stop3;
     	
+    	
+    	//Load all of the keys we will need to run every pattern
+    	uint8_t server_private[32];
+    	uint8_t server_public[32];
+    	uint8_t client_public[32];
+    	uint8_t server_private_pq[1632];
+    	uint8_t server_public_pq[800];
+    	uint8_t client_public_pq[800];
+    	
+    	load_key("./Keys/server_priv.txt", server_private, 32);
+    	load_key("./Keys/server_pub.txt", server_public, 32);
+    	load_key("./Keys/client_pub.txt", client_public, 32);
+    	load_key("./Keys/server_priv_pq.txt", server_private_pq, 1632);
+    	load_key("./Keys/server_pub_pq.txt", server_public_pq, 800);
+    	load_key("./Keys/client_pub_pq.txt", client_public_pq, 800);
+    	
     	struct timespec start, stop;
     
-   	/*Prepare socket and start listening*/
+   	//Prepare socket and start listening
     
-    	/*Create socket*/
+    	//Create socket
     	socket_desc = socket(AF_INET , SOCK_STREAM , 0);
     	if (socket_desc == -1)
     	{
     		printf("Could not create socket");
+    		return 1;
+    	}
+    	
+    	//For when we are rerunning the server
+    	if(setsockopt(socket_desc, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0){
+    		puts("setsockopt SO_REUSEADDR failed");
+    		return 1;
     	}
     
-    	/*Prepare the sockaddr_in structure*/
+    	//Prepare the sockaddr_in structure
    	server.sin_family = AF_INET;
     	server.sin_addr.s_addr = INADDR_ANY;
     	server.sin_port = htons( 8888 );
+    	
     
-    	/*Bind*/
+    	//Bind
     	if( bind(socket_desc,(struct sockaddr *)&server , sizeof(server)) < 0)
     	{
     		puts("bind failed");
@@ -119,7 +153,7 @@ int main(int argc, char *argv[])
     	}
     	puts("Bind done");
     
-    	/*Listen*/
+    	//Listen
     	listen(socket_desc , 3);
     	c = sizeof(struct sockaddr_in);
 
@@ -144,7 +178,7 @@ int main(int argc, char *argv[])
 	    	// Run the handshake test_number of times
 	    	for(int i = 0; i <= test_number; i++){
     	
-	    		/* Accept incoming connections */
+	    		// Accept incoming connections 
 		    	new_socket = accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&c);
 		    
 			if (new_socket<0)
@@ -154,62 +188,47 @@ int main(int argc, char *argv[])
 			
 			}
 		
-			/*Preparation for the handshake*/
+			//Preparation for the handshake
 	    
-		    	/*Initialize the handshake state with the protocol and the role*/
+		    	//Initialize the handshake state with the protocol and the role
 			err = noise_handshakestate_new_by_name(&handshake,  to_test_full_name[k], NOISE_ROLE_RESPONDER);
 		 	if (err != NOISE_ERROR_NONE) {
 				noise_perror(to_test_full_name[k], err);
 				return 1;
 			}
 			
-			/*Receive the clients static public key*/
-			if (noise_handshakestate_needs_remote_public_key(handshake)){
-				int rec = recv(new_socket, message, key_size, 0);
-				if (rec < 0) {
-				    	puts("Error on receiving the public key");
-				}
-				dh = noise_handshakestate_get_remote_public_key_dh(handshake);
-				err = noise_dhstate_set_public_key(dh, message, key_size);
-				if (err != NOISE_ERROR_NONE) {
-				    	noise_perror("set server public key", err);
-					return 1;
-				}
-			}
-			
-			/* To avoid the client sending two messages back to back, necessary for the "KN" and "KX" patterns */
-			if(in_list(0, k)){
-				message[0] = 0;
-				if (send(new_socket , message , 1 , 0) < 0) {
-					puts("Error on 1 bit receive, client");
-					break;
-				}
-			}
-				
-			/*Generate a new static keypair for the server*/
+			// Set static keypair
 			if (noise_handshakestate_needs_local_keypair(handshake)){
 				dh = noise_handshakestate_get_local_keypair_dh(handshake);
-				err = noise_dhstate_generate_keypair(dh);
+				
+				if(key_size == 32){
+					err = noise_dhstate_set_keypair(dh, server_private, key_size, server_public, key_size);
+				} else {
+					err = noise_dhstate_set_keypair(dh, server_private_pq, 1632, server_public_pq, key_size);
+				}
 				if (err != NOISE_ERROR_NONE) {
 				    noise_perror("Generate key", err);
 				    return 1;
 				}
 			}
 			
-			/*Send the generated static public key to the client, cause I don't want to hardcode an 800 byte key*/
-			if(in_list(1, k)){
-				err = noise_dhstate_get_public_key(dh, message, key_size);
-				if (err != NOISE_ERROR_NONE) {
-				    noise_perror("Get public key", err);
-				    return 1;
+			// Set remote public key
+			if (noise_handshakestate_needs_remote_public_key(handshake)){
+				dh = noise_handshakestate_get_remote_public_key_dh(handshake);
+				
+				if(key_size == 32){
+					err = noise_dhstate_set_public_key(dh, client_public, key_size);
+				} else {
+					err = noise_dhstate_set_public_key(dh, client_public_pq, key_size);
 				}
-				int sent = send(new_socket, message, key_size, 0);
-				if (sent < 0) {
-				    	puts("Error on receiving the public key");
+				
+				if (err != NOISE_ERROR_NONE) {
+				    	noise_perror("set server public key", err);
+					return 1;
 				}
 			}
 			
-			/*Start the handshake*/
+			//Start the handshake
 			
 		    	int ok = 1;
 		    	//puts("Handshake starting");
@@ -219,13 +238,13 @@ int main(int argc, char *argv[])
 			    ok = 0;
 			}
 		    	
-		    	/* Run the handshake until we run out of things to read or write */
+		    	// Run the handshake until we run out of things to read or write
 		    	started = 0;
 			while (ok) {
 			
 				action = noise_handshakestate_get_action(handshake);
 				if (action == NOISE_ACTION_WRITE_MESSAGE) {
-				    /* Write the next handshake message with a zero-length payload */
+				    // Write the next handshake message with a zero-length payload
 				    noise_buffer_set_output(mbuf, message + 2, sizeof(message) - 2);
 				    
 				    start3 = get_cpucycles();
@@ -278,7 +297,7 @@ int main(int argc, char *argv[])
 					}
 				    }
 				} else if (action == NOISE_ACTION_READ_MESSAGE) {
-				    /* Read the next handshake message and discard the payload */
+				    // Read the next handshake message and discard the payload
 				    full_size = 1;
 				    received = 0;
 				    while(full_size > received){
@@ -333,7 +352,7 @@ int main(int argc, char *argv[])
 					break;
 				    }
 				} else {
-				    /* Either the handshake has finished or it has failed */
+				    // Either the handshake has finished or it has failed
 				    break;
 				}
 			}
@@ -375,6 +394,7 @@ int main(int argc, char *argv[])
 	
 		float comp_percent = ((float) total_time_comp) / ((float) total_time) * 100;
 		qsort(results, sizeof(results)/sizeof(*results), sizeof(*results), comp);
+		qsort(handshake_times_ms, sizeof(handshake_times_ms)/sizeof(*handshake_times_ms), sizeof(*handshake_times_ms), comp2);
 		/*Print in a format to copy paste into latex tables, in order of: what pattern we're at, average time, median time, max time, minimum time, average computation 
 		time and lastly the percent of the average time that the computational time takes up*/
 		if(k % 2 == 0){
