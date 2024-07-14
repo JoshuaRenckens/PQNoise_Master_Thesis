@@ -16,20 +16,6 @@
 // Size is max Noise message length + 2
 static uint8_t message[65535 + 2];
 static int test_number = 1000;
-static char to_test[24][5] = {"NN", "pqNN", "NX", "pqNX", "NK", "pqNK", "XN", "pqXN", "XX", "pqXX", "XK", "pqXK",
-				    "KN", "pqKN", "KX", "pqKX", "KK", "pqKK", "IN", "pqIN", "IX", "pqIX", "IK", "pqIK"};
-static const char to_test_full_name[24][40] = {"Noise_NN_25519_ChaChaPoly_BLAKE2s", "Noise_pqNN_Kyber512_ChaChaPoly_BLAKE2s",
-				 	       "Noise_NX_25519_ChaChaPoly_BLAKE2s", "Noise_pqNX_Kyber512_ChaChaPoly_BLAKE2s",
-				 	       "Noise_NK_25519_ChaChaPoly_BLAKE2s", "Noise_pqNK_Kyber512_ChaChaPoly_BLAKE2s",
-				 	       "Noise_XN_25519_ChaChaPoly_BLAKE2s", "Noise_pqXN_Kyber512_ChaChaPoly_BLAKE2s",
-				 	       "Noise_XX_25519_ChaChaPoly_BLAKE2s", "Noise_pqXX_Kyber512_ChaChaPoly_BLAKE2s",
-				 	       "Noise_XK_25519_ChaChaPoly_BLAKE2s", "Noise_pqXK_Kyber512_ChaChaPoly_BLAKE2s",
-				 	       "Noise_KN_25519_ChaChaPoly_BLAKE2s", "Noise_pqKN_Kyber512_ChaChaPoly_BLAKE2s",
-				 	       "Noise_KX_25519_ChaChaPoly_BLAKE2s", "Noise_pqKX_Kyber512_ChaChaPoly_BLAKE2s",
-				 	       "Noise_KK_25519_ChaChaPoly_BLAKE2s", "Noise_pqKK_Kyber512_ChaChaPoly_BLAKE2s",
-				 	       "Noise_IN_25519_ChaChaPoly_BLAKE2s", "Noise_pqIN_Kyber512_ChaChaPoly_BLAKE2s",
-				 	       "Noise_IX_25519_ChaChaPoly_BLAKE2s", "Noise_pqIX_Kyber512_ChaChaPoly_BLAKE2s",
-				 	       "Noise_IK_25519_ChaChaPoly_BLAKE2s", "Noise_pqIK_Kyber512_ChaChaPoly_BLAKE2s"};
 
 /*Access system counter for benchmarking*/
 int64_t get_cpucycles()
@@ -90,6 +76,11 @@ int load_key(char *file, uint8_t *key, int size){
 
 int main(int argc, char *argv[])
 {
+	if(argc != 2){
+		puts("Wrong amount of arguments, expected 1.");
+		return 1;
+	}
+	
 	NoiseDHState *dh;
 	NoiseHandshakeState *handshake;
 	int err, action, key_size, socket_desc;
@@ -101,6 +92,14 @@ int main(int argc, char *argv[])
 	uint64_t results[test_number];
 	double handshake_times_ms[test_number], overall_ms;
 	uint64_t start2, stop2, start3, stop3;
+	
+	char to_test_full[2][40];
+	snprintf(to_test_full[0], sizeof(to_test_full[0]), "Noise_%s_25519_ChaChaPoly_BLAKE2s", argv[1]);
+	snprintf(to_test_full[1], sizeof(to_test_full[1]), "Noise_pq%s_Kyber512_ChaChaPoly_BLAKE2s", argv[1]);
+	
+	char to_test[2][5];
+	snprintf(to_test[0], sizeof(to_test[0]), "%s", argv[1]);
+	snprintf(to_test[1], sizeof(to_test[1]), "pq%s", argv[1]);
 	
 	//Load all of the keys we will need to run every pattern
     	uint8_t client_private[32];
@@ -126,7 +125,7 @@ int main(int argc, char *argv[])
 	
 	
 	// Go through the list of handshake names and run them all.
-    	for(int k = 0; k < 24; k++){
+    	for(int k = 0; k < 2; k++){
 	    	// Set the correct key size, the regular handshakes are at even positions in the list while the pq ones are not.
 		if(k%2 == 0){
 			key_size = 32;
@@ -156,9 +155,9 @@ int main(int argc, char *argv[])
 			//Preparation for the handshake
 			
 			//Initialize the handshake state with the protocol and the role
-			err = noise_handshakestate_new_by_name(&handshake,  to_test_full_name[k], NOISE_ROLE_INITIATOR);
+			err = noise_handshakestate_new_by_name(&handshake,  to_test_full[k], NOISE_ROLE_INITIATOR);
 			if (err != NOISE_ERROR_NONE) {
-				noise_perror(to_test_full_name[k], err);
+				noise_perror(to_test_full[k], err);
 				return 1;
 			}
 			
@@ -328,6 +327,8 @@ int main(int argc, char *argv[])
 			stop2 = get_cpucycles();
 			clock_gettime(CLOCK_MONOTONIC_RAW, &stop);
 			
+			close(socket_desc);
+			
 			if(start2 > stop2){
 			    	// In case the cpu cycle counter overflowed, happens fairly regularly on the board.
 			    	current = (stop2 + UINT_MAX) - start2;
@@ -359,7 +360,6 @@ int main(int argc, char *argv[])
 			}
 			
 			
-			close(socket_desc);
 			
 		}
 		float comp_percent = ((float) total_time_comp) / ((float) total_time) * 100.0;
