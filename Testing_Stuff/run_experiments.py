@@ -14,11 +14,11 @@ def run_tests(to_execute, to_save, delay, loss):
         path = "./Noise_c/"
 
     client_command = [
-        'ip', 'netns', 'exec', 'cli_ns', 'taskset', '-c', '3', 'nice', '-n', '-20',
+        'ip', 'netns', 'exec', 'cli_ns',
         path + '' + file_addition + 'client', to_execute
     ]
     server_command = [
-        'ip', 'netns', 'exec', 'srv_ns', 'taskset', '-c', '2', 'nice', '-n', '-20',
+        'ip', 'netns', 'exec', 'srv_ns',
         path + '' + file_addition + 'server', to_execute
     ]
 
@@ -102,8 +102,8 @@ def get_rtt():
     
     
 n = 0
-# ['2.684ms', '15.458ms', '39.224ms', '97.73ms']
-for latency_ms in ['2.684', '15.458','39.224', '97.73']:
+# ['2.684', '15.458', '39.224', '97.73']
+for latency_ms in ['2.684']:
     n += 1
     
     # Get the round trip time
@@ -113,9 +113,10 @@ for latency_ms in ['2.684', '15.458','39.224', '97.73']:
     #print(rtt)
 
 
-    for subject in ['NN', 'NK', 'XX']:
+    for subject in ['NX']:
         #for pkt_loss in [0, 0.1, 0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6, 7, 8, 9, 10]:
-        for pkt_loss in [0, 1, 3, 5, 10]:
+        # 0, 1, 3, 5, 8, 10, 13, 15, 18, 20
+        for pkt_loss in [0, 1, 3, 5]:
             change_qdisc('cli_ns', 'cli_ve', pkt_loss, delay=latency_ms)
             change_qdisc('srv_ns', 'srv_ve', pkt_loss, delay=latency_ms)
             res = run_tests(subject, 'Results_'+subject+'.txt', latency_ms, pkt_loss)

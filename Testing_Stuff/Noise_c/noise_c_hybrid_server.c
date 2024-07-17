@@ -7,267 +7,195 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+
 #include <time.h>
 
-// Size is max message length + 2
-// PROBLEM CASES: KN; KK; IK
+#define NS_IN_MS 1000000.0
+#define MS_IN_S 1000
+
 static uint8_t message[65535 + 2];
 static int test_number = 1000;
-static char extra_send_front[3][6] = {"KNhyb", "KXhyb", "KKhyb"};
-static char extra_send_mid[2][6] = {"KNhyb", "KXhyb"};
-static char extra_receive_front[4][6] = {"NKhyb", "XKhyb", "IKhyb", "KKhyb"};
-static char extra_receive_back[3][6] = {"NKhyb", "IKhyb", "XKhyb"};
-static char extra_send_back[3][6] = {"NXhyb", "KXhyb", "IXhyb"};
-static char send_key[4][6] = {"NKhyb", "XKhyb", "IKhyb", "KKhyb"};
-static char to_test[12][6] = {"NNhyb", "NXhyb", "NKhyb", "XNhyb", "XXhyb", "XKhyb", "KNhyb", "KXhyb", "KKhyb", "INhyb", "IXhyb", "IKhyb"};
-static const char to_test_full_name[12][50] = {"Noise_NNhyb_25519+Kyber512_ChaChaPoly_BLAKE2s",
-				 	       "Noise_NXhyb_25519+Kyber512_ChaChaPoly_BLAKE2s", 
-				 	       "Noise_NKhyb_25519+Kyber512_ChaChaPoly_BLAKE2s", 
-				 	       "Noise_XNhyb_25519+Kyber512_ChaChaPoly_BLAKE2s",
-				 	       "Noise_XXhyb_25519+Kyber512_ChaChaPoly_BLAKE2s",
-				 	       "Noise_XKhyb_25519+Kyber512_ChaChaPoly_BLAKE2s",
-				 	       "Noise_KNhyb_25519+Kyber512_ChaChaPoly_BLAKE2s",
-				 	       "Noise_KXhyb_25519+Kyber512_ChaChaPoly_BLAKE2s", 
-				 	       "Noise_KKhyb_25519+Kyber512_ChaChaPoly_BLAKE2s",
-				 	       "Noise_INhyb_25519+Kyber512_ChaChaPoly_BLAKE2s",
-				 	       "Noise_IXhyb_25519+Kyber512_ChaChaPoly_BLAKE2s",
-				 	       "Noise_IKhyb_25519+Kyber512_ChaChaPoly_BLAKE2s"};
 
 int64_t get_cpucycles()
 { // Access system counter for benchmarking
-  unsigned int hi, lo;
-
-  //asm("cpuid");
-  asm volatile ("rdtsc\n\t" : "=a" (lo), "=d"(hi));
-  return ((int64_t)lo) | (((int64_t)hi) << 32);
+#if defined(__GNUC__) && defined(__ARM_ARCH_7A__)
+	// Case for the board
+        uint32_t r = 0;
+        asm volatile("mrc p15, 0, %0, c9, c13, 0" : "=r"(r) );
+        return r;
+#else
+	// Case for a laptop with an intel cpu
+	unsigned int hi, lo;
+  
+  	asm volatile ("rdtsc\n\t" : "=a" (lo), "=d"(hi));
+  	return ((int64_t)lo) | (((int64_t)hi) << 32);
+#endif
 }
 
 int comp(const void* elem1, const void* elem2){
-	int val1 = *((int*)elem1);
-	int val2 = *((int*)elem2);
+	double val1 = *((double*)elem1);
+	double val2 = *((double*)elem2);
 	return (val1 > val2) - (val1 < val2);
 }
 
-int max(int a, int b){
-	if(a > b){
-		return a;
-	} else {
-		return b;
+int load_key(char *file, uint8_t *key, int size){
+	FILE *fp;
+	fp = fopen(file, "r");
+		
+	if(fp == NULL){
+		puts("Error opening file");
+		return 1;
 	}
+	
+	size_t read = fread(key, 1, size, fp);
+	if(read != size){
+		puts("Wrong amount of bytes read");
+		return 1;
+	}
+	
+	fclose(fp);
+	return 0;
 }
-
-// Check if the current pattern is in one of the above lists. Needed to know when we need to send an extra bit before start/after finish of the handshake to keep messages apart, also needed to know if we need to send the static key beforehand for the k patterns.
-int in_list(int place, int index){
-	char* elem = to_test[index];
-	int res = 0;
-	if(place == 0){
-		for(int i = 0; i < 3; i++){
-			res = max(!strcmp(extra_send_front[i], elem), res);
-		}
-	} else if (place == 1){
-		for(int i = 0; i < 3; i++){
-			//printf("What we have: %s, what we check for: %s\n", elem, extra_send_back[i]);
-			res = max(!strcmp(extra_send_back[i], elem), res);
-		}
-	} else if (place == 2){
-		for(int i = 0; i < 3; i++){
-			res = max(!strcmp(extra_receive_back[i], elem), res);
-		}
-	} else if (place == 3){
-		for(int i = 0; i < 4; i++){
-			res = max(!strcmp(send_key[i], elem), res);
-		}
-	} else if (place == 4){
-		for(int i = 0; i < 4; i++){
-			res = max(!strcmp(extra_receive_front[i], elem), res);
-		}
-	}
-	else if (place == 5){
-		for(int i = 0; i < 2; i++){
-			res = max(!strcmp(extra_send_mid[i], elem), res);
-		}
-	}
-	return res;
-}
-
 
 int main(int argc, char *argv[])
 {
-    NoiseDHState *dh;
-    NoiseHandshakeState *handshake;
-    int err, action, key_size, socket_desc , new_socket , c, started, hyb_key_size;
-    struct sockaddr_in server , client;
-    NoiseBuffer mbuf;
-    size_t message_size, received, full_size;
-    
-    uint64_t total_time, total_time_comp, max, min, current;
-    uint64_t results[test_number];
-    uint64_t start2, stop2, start3, stop3;
-    
-    
-    //Create socket
-    socket_desc = socket(AF_INET , SOCK_STREAM , 0);
-    if (socket_desc == -1)
-    {
-    	printf("Could not create socket");
-    }
-    
-    //Prepare the sockaddr_in structure
-    server.sin_family = AF_INET;
-    server.sin_addr.s_addr = INADDR_ANY;
-    server.sin_port = htons( 8888 );
-    
-    //Bind
-    if( bind(socket_desc,(struct sockaddr *)&server , sizeof(server)) < 0)
-    {
-    	puts("bind failed");
-    	return 1;
-    }
-    puts("Bind done");
-    
-    //Listen
-    listen(socket_desc , 3);
-    
-    //Accept incoming connection
-    puts("Waiting for incoming connections...");
-    c = sizeof(struct sockaddr_in);
-    new_socket = accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&c);
-    
-    if (new_socket<0)
-    {
-    	perror("accept failed");
-    	return 1;
-    
-    }
-    
-    // Go through the list of handshake names and run them all.
-    for(int k = 0; k < 12; k++){
-    	// Set the correct key size, the regular handshakes are at even positions in the list while the pq ones are not.
-	key_size = 32;
-	hyb_key_size = 800;
+	NoiseDHState *dh;
+	NoiseHandshakeState *handshake;
+	int err, action, socket_desc , new_socket , c, started;
+	struct sockaddr_in server , client;
+	NoiseBuffer mbuf;
+	size_t message_size, received, full_size;
+
+	uint64_t total_time_comp, current, start3, stop3;
+	double results[test_number], overall_ms, comp_ms;
+
+	char handshake_pattern[50];
+	snprintf(handshake_pattern, sizeof(handshake_pattern), "Noise_%s_25519+Kyber512_ChaChaPoly_BLAKE2s", argv[1]);
+
+	//Load all of the keys
+    	uint8_t server_private[32];
+    	uint8_t server_public[32];
+    	uint8_t client_public[32];
+    	uint8_t server_private_pq[1632];
+    	uint8_t server_public_pq[800];
+    	uint8_t client_public_pq[800];
     	
-    	total_time = 0;
+    	load_key("./Keys/server_priv.txt", server_private, 32);
+    	load_key("./Keys/server_pub.txt", server_public, 32);
+    	load_key("./Keys/client_pub.txt", client_public, 32);
+    	load_key("./Keys/server_priv_pq.txt", server_private_pq, 1632);
+    	load_key("./Keys/server_pub_pq.txt", server_public_pq, 800);
+    	load_key("./Keys/client_pub_pq.txt", client_public_pq, 800);
+
+
+	struct timespec start, stop, start2, stop2;
+
+	//Create socket
+	socket_desc = socket(AF_INET , SOCK_STREAM , 0);
+	if (socket_desc == -1)
+	{
+		printf("Could not create socket");
+	}
+
+	//Prepare the sockaddr_in structure
+	server.sin_family = AF_INET;
+	server.sin_addr.s_addr = INADDR_ANY;
+	server.sin_port = htons( 8888 );
+    
+	//Bind
+	if( bind(socket_desc,(struct sockaddr *)&server , sizeof(server)) < 0)
+	{
+		puts("bind failed");
+		return 1;
+	}
+    
+	//Listen
+	listen(socket_desc , 3);
+
+	//Accept incoming connection
+	puts("Waiting for incoming connections...");
+	c = sizeof(struct sockaddr_in);
+	new_socket = accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&c);
+
+	if (new_socket<0)
+	{
+		perror("accept failed");
+		return 1;
+	}
+    	
         total_time_comp = 0;
-        max = 0;
-        min = INT_MAX;
+        overall_ms = 0;
+	comp_ms = 0;
         current = 0;
     
     	//printf("\nStarting runs for %s handshake.\n", to_test[k]);
     	// Run the handshake test_number of times
     	for(int i = 0; i <= test_number; i++){
+    	
+    		//Preparation for the handshake
     
-	    	/*Initialize the handshake state with the protocol and the role*/
-		err = noise_handshakestate_new_by_name(&handshake,  to_test_full_name[k], NOISE_ROLE_RESPONDER);
+	    	//Initialize the handshake state with the protocol and the role
+		err = noise_handshakestate_new_by_name(&handshake,  handshake_pattern, NOISE_ROLE_RESPONDER);
 	 	if (err != NOISE_ERROR_NONE) {
-			noise_perror(to_test_full_name[k], err);
+			noise_perror(handshake_pattern, err);
 			return 1;
 		}
 		
-		/*Receive the clients static public key*/
-		if (noise_handshakestate_needs_remote_public_key(handshake)){
-			int rec = recv(new_socket, message, key_size, 0);
-			if (rec < 0) {
-			    	puts("Error on receiving the public key");
-			}
-			dh = noise_handshakestate_get_remote_public_key_dh(handshake);
-			err = noise_dhstate_set_public_key(dh, message, key_size);
-			if (err != NOISE_ERROR_NONE) {
-			    	noise_perror("set server public key", err);
-				return 1;
-			}
-		}
-		
-		// To avoid the client sending two messages back to back
-		if(in_list(0, k)){
-			message[0] = 0;
-			if (send(new_socket , message , 1 , 0) < 0) {
-				puts("Error on 1 bit receive, client");
-				break;
-			}
-		}
-		
-		/*Receive the clients static hybrid public key, and set the remote public key.*/
-		if (noise_handshakestate_needs_remote_hybrid_public_key(handshake)){
-			int rec = recv(new_socket, message, hyb_key_size, 0);
-			if (rec < 0) {
-			    	puts("Error on receiving the public key");
-			}
-			dh = noise_handshakestate_get_remote_hybrid_public_key_dh(handshake);
-			err = noise_dhstate_set_public_key(dh, message, hyb_key_size);
-			if (err != NOISE_ERROR_NONE) {
-			    	noise_perror("set server public key", err);
-				return 1;
-			}
-		}
-		
-		// To avoid the client sending two messages back to back
-		if(in_list(5, k)){
-			message[0] = 0;
-			if (send(new_socket , message , 1 , 0) < 0) {
-				puts("Error on 1 bit receive, client");
-				break;
-			}
-		}
-			
-		/*Generate a new static keypair for the server*/
+		//Set static DH keypair
 		if (noise_handshakestate_needs_local_keypair(handshake)){
 			dh = noise_handshakestate_get_local_keypair_dh(handshake);
-			err = noise_dhstate_generate_keypair(dh);
+			err = noise_dhstate_set_keypair(dh, server_private, 32, server_public, 32);
+			
 			if (err != NOISE_ERROR_NONE) {
 			    noise_perror("Generate key", err);
 			    return 1;
 			}
 		}
 		
-		/*Send the generated static public key to the client*/
-		if(in_list(3, k)){
-			err = noise_dhstate_get_public_key(dh, message, key_size);
-			if (err != NOISE_ERROR_NONE) {
-			    noise_perror("Get public key", err);
-			    return 1;
-			}
-			int sent = send(new_socket, message, key_size, 0);
-			if (sent < 0) {
-			    	puts("Error on receiving the public key");
-			}
-		}
-		
-		// To avoid the server sending two messages back to back
-		if(in_list(4, k)){
-			message_size = recv(new_socket, message , sizeof(message) , 0);
-			if(message_size != 1){
-				puts("Error on 1 bit receive, server");
-			    	break;
-			}
-		}
-		
-		/*Create own hybrid static key*/
+		//Set static hybrid/KEM keypair
 		if (noise_handshakestate_needs_local_hybrid_keypair(handshake)){
 			dh = noise_handshakestate_get_local_hybrid_keypair_dh(handshake);
-			//start2 = get_cpucycles();
-			err = noise_dhstate_generate_keypair(dh);
-			//stop2 = get_cpucycles();
-			//printf("Time taken to create static key: %ld cycles.\n", stop2 - start2);
+			err = noise_dhstate_set_keypair(dh, server_private_pq, 1632, server_public_pq, 800);
+								
 			if (err != NOISE_ERROR_NONE) {
 			    noise_perror("Generate key", err);
 			    return 1;
 			}
 		}
 		
-		/*Send client own hybrid public key*/
-		if(in_list(3, k)){
-			err = noise_dhstate_get_public_key(dh, message, hyb_key_size);
+		//Set the remote static DH public key
+		if (noise_handshakestate_needs_remote_public_key(handshake)){
+			dh = noise_handshakestate_get_remote_public_key_dh(handshake);
+			err = noise_dhstate_set_public_key(dh, client_public, 32);
+								
 			if (err != NOISE_ERROR_NONE) {
-			    noise_perror("Get public key", err);
-			    return 1;
-			}
-			int sent = send(new_socket, message, hyb_key_size, 0);
-			if (sent < 0) {
-			    	puts("Error on receiving the public key");
+			    	noise_perror("set server public key", err);
+				return 1;
 			}
 		}
 		
-		/*Start the handshake*/
+		//Set the remote static hybrid/KEM public key
+		if (noise_handshakestate_needs_remote_hybrid_public_key(handshake)){
+			dh = noise_handshakestate_get_remote_hybrid_public_key_dh(handshake);
+			err = noise_dhstate_set_public_key(dh, client_public_pq, 800);
+			
+			if (err != NOISE_ERROR_NONE) {
+			    	noise_perror("set server public key", err);
+				return 1;
+			}
+		}
+		
+		//Start the handshake
+		
+		// Accept incoming connections 
+	    	new_socket = accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&c);
+	    
+		if (new_socket<0)
+		{
+		    perror("accept failed");
+		    return 1;
+		
+		}
 		
 	    	int ok = 1;
 	    	//puts("Handshake starting");
@@ -286,13 +214,26 @@ int main(int argc, char *argv[])
 			    /* Write the next handshake message with a zero-length payload */
 			    noise_buffer_set_output(mbuf, message + 2, sizeof(message) - 2);
 			    
+			    clock_gettime(CLOCK_MONOTONIC_RAW, &start2);
 			    start3 = get_cpucycles();
 			    
 			    err = noise_handshakestate_write_message(handshake, &mbuf, NULL);
 			    
 			    stop3 = get_cpucycles();
+			    clock_gettime(CLOCK_MONOTONIC_RAW, &stop2);
 			    //printf("Time taken to create next message: %ld cycles.\n", stop3 - start3);
-			    total_time_comp += stop3 - start3;
+			    current = stop3 - start3;
+				    
+			    if(start3 > stop3){
+			    	// In case the cpu cycle counter overflowed, happens fairly regularly on the board.
+			    	current = (stop3 + UINT_MAX) - start3;
+			    } else {
+			    	// Regular case
+			    	current = stop3 - start3;
+			    }
+		
+			    total_time_comp += current;
+			    comp_ms += ((stop2.tv_sec - start2.tv_sec) * MS_IN_S) + ((stop2.tv_nsec - start2.tv_nsec) / NS_IN_MS);
 			    
 			    if (err != NOISE_ERROR_NONE) {
 				noise_perror("write handshake", err);
@@ -350,20 +291,31 @@ int main(int argc, char *argv[])
 			    }
 			    // Start measuring the servers time after it received the first message
 			    if(!started){
-			    	start2 = get_cpucycles();
+			    	clock_gettime(CLOCK_MONOTONIC_RAW, &start);
 			    	started = 1;
 			    }
 			    noise_buffer_set_input(mbuf, message + 2, received - 2);
 			    
+			    clock_gettime(CLOCK_MONOTONIC_RAW, &start2);
 			    start3 = get_cpucycles();
 			    
 			    err = noise_handshakestate_read_message(handshake, &mbuf, NULL);
 			    
 			    stop3 = get_cpucycles();
+			    clock_gettime(CLOCK_MONOTONIC_RAW, &stop2);
 			    //printf("Read, buffer size: %ld\n", mbuf.size);
 			    //printf("Received: %ld\n", received);
 			    //printf("Time taken to process the message: %ld cycles.\n", stop3 - start3);
-			    total_time_comp += stop3 - start3;
+			    if(start3 > stop3){
+			    	// In case the cpu cycle counter overflowed, happens fairly regularly on the board.
+			    	current = (stop3 + UINT_MAX) - start3;
+			    } else {
+			    	// Regular case
+			    	current = stop3 - start3;
+			    }
+		
+			    total_time_comp += current;
+			    comp_ms += ((stop2.tv_sec - start2.tv_sec) * MS_IN_S) + ((stop2.tv_nsec - start2.tv_nsec) / NS_IN_MS);
 			    
 			    if (err != NOISE_ERROR_NONE) {
 			    	//printf("Error value: %d \n", err);
@@ -371,73 +323,62 @@ int main(int argc, char *argv[])
 				ok = 0;
 				break;
 			    }
-			} else {
+			} else if (action == NOISE_ACTION_SPLIT) {
+				NoiseCipherState *send_cipher = 0, *recv_cipher = 0;
+				
+				clock_gettime(CLOCK_MONOTONIC_RAW, &start2);
+			    	start3 = get_cpucycles();
+			    	
+				err = noise_handshakestate_split(handshake, &send_cipher, &recv_cipher);
+				
+				stop3 = get_cpucycles();
+			    	clock_gettime(CLOCK_MONOTONIC_RAW, &stop2);
+			    	
+			    	if(start3 > stop3){
+			    		// In case the cpu cycle counter overflowed, happens fairly regularly on the board.
+			    	    	current = (stop3 + UINT_MAX) - start3;
+			    	} else {
+			    		// Regular case
+			    		current = stop3 - start3;
+			    	}
+		
+			    	total_time_comp += current;
+			    	comp_ms += ((stop2.tv_sec - start2.tv_sec) * MS_IN_S) + ((stop2.tv_nsec - start2.tv_nsec) / NS_IN_MS);
+				
+				if (err != NOISE_ERROR_NONE) {
+				    noise_perror("split to start data transfer", err);
+				    ok = 0;
+				}
+			}else {
 			    /* Either the handshake has finished or it has failed */
 			    break;
 			}
 		}
-		stop2 = get_cpucycles();
-		current = stop2 - start2;
+		clock_gettime(CLOCK_MONOTONIC_RAW, &stop);
+			
 		// One run to warm the cache where we won't include the time
 		if(i != 0){
-			total_time += current;
-			if(current > max){
-				max = current;
-			}
-			
-			if(current < min){
-				min = current;
-			}
-			results[i-1] = current;
+			results[i-1] = ((stop.tv_sec - start.tv_sec) * MS_IN_S) + ((stop.tv_nsec - start.tv_nsec) / NS_IN_MS);
+			overall_ms += results[i-1];
 		}
-		//printf("\nTime taken by run %d: %ld cycles.\n", i, current);
-		//printf("Current total time: %ld cycles.\n", total_time);
-		
 		
 		if(ok == 0){
 			puts("Handshake failed\n");
 		}
 		
-		if (in_list(1, k)) {
-			message[0] = 0;
-			if (send(new_socket , message , 1 , 0) < 0) {
-				puts("Error on final send, server");
-				ok = 0;
-				break;
-			}
-			//puts("Final send done, server\n\n");
-		} else if (in_list(2, k)){
-			message_size = recv(new_socket, message , sizeof(message) , 0);
-			if(message_size != 1){
-				puts("Error on final receive, server");
-				ok = 0;
-			    	break;
-			}
-			//puts("Final receive done, client\n\n");
-		}
+		close(new_socket);
 	}
 	
-	float comp_percent = ((float) total_time_comp) / ((float) total_time) * 100;
-        qsort(results, sizeof(results)/sizeof(*results), sizeof(*results), comp);
-        if(k % 2 == 0){
-		printf("\\hline \n");
-	}
-	printf("%s & %5.1f & %5.1f & %5.1f & %5.1f & %5.2f & %5.2f \\\\ \n", to_test[k], (total_time/test_number)/1000000.0, results[500]/1000000.0, max/1000000.0, min/1000000.0, (total_time_comp/test_number)/1000000.0, comp_percent);
-	if(k % 2 == 0){
-		printf("\\hline \n");
-	}
-        /*printf("Average time taken by the handshakes: %ld cycles.\n", total_time/test_number);
-        printf("Average time taken for the computations: %ld cycles.\n", total_time_comp/test_number);
-        printf("On average %5.2f percent of the total time is computation.\n\n", comp_percent);
-        printf("Median time taken by the handshakes: %ld cycles.\n", results[500]);
-        printf("Maximum time taken by the handshakes: %ld cycles.\n", max);
-        printf("Minimum time taken by the handshakes: %ld cycles.\n\n\n", min);*/
-    }
+	qsort(results, sizeof(results)/sizeof(*results), sizeof(*results), comp);
+	/*Print in a format to copy paste into latex tables, in order of: what pattern we're at, average time, median time, max time, minimum time and lastly average 
+	computation time in both cycles and ms */
+	printf("\\hline\\hline \n");
+	
+	printf("Hybrid %s & %7.2f & %7.2f & %7.2f & %7.2f & %7.2f & %7.2f \\\\ \n", argv[1], overall_ms/test_number, results[test_number/2], results[test_number-1], results[0], (total_time_comp/test_number+1)/1000000.0, comp_ms/(test_number+1));
 
+	printf("\\hline \n");
+	
+	close(socket_desc);
     
-    
-    close(new_socket);
-    close(socket_desc);
-    
-    return 0;
+    	return 0;
 }
