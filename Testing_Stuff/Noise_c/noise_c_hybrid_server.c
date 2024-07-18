@@ -96,6 +96,12 @@ int main(int argc, char *argv[])
 	{
 		printf("Could not create socket");
 	}
+	
+	//For when we are rerunning the server
+    	if(setsockopt(socket_desc, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0){
+    		puts("setsockopt SO_REUSEADDR failed");
+    		return 1;
+    	}
 
 	//Prepare the sockaddr_in structure
 	server.sin_family = AF_INET;
@@ -111,17 +117,7 @@ int main(int argc, char *argv[])
     
 	//Listen
 	listen(socket_desc , 3);
-
-	//Accept incoming connection
-	puts("Waiting for incoming connections...");
 	c = sizeof(struct sockaddr_in);
-	new_socket = accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&c);
-
-	if (new_socket<0)
-	{
-		perror("accept failed");
-		return 1;
-	}
     	
         total_time_comp = 0;
         overall_ms = 0;
@@ -374,7 +370,7 @@ int main(int argc, char *argv[])
 	computation time in both cycles and ms */
 	printf("\\hline\\hline \n");
 	
-	printf("Hybrid %s & %7.2f & %7.2f & %7.2f & %7.2f & %7.2f & %7.2f \\\\ \n", argv[1], overall_ms/test_number, results[test_number/2], results[test_number-1], results[0], (total_time_comp/test_number+1)/1000000.0, comp_ms/(test_number+1));
+	printf("%s & %7.2f & %7.2f & %7.2f & %7.2f & %7.2f & %7.2f \\\\ \n", argv[1], overall_ms/test_number, results[test_number/2], results[test_number-1], results[0], (total_time_comp/test_number+1)/1000000.0, comp_ms/(test_number+1));
 
 	printf("\\hline \n");
 	

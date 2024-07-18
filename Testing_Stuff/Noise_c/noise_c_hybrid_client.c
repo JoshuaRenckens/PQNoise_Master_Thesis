@@ -94,13 +94,6 @@ int main(int argc, char *argv[])
 
 	struct timespec start, stop, start2, stop2;
 
-	//Create socket
-	socket_desc = socket(AF_INET , SOCK_STREAM , 0);
-	if (socket_desc == -1)
-	{
-		printf("Could not create socket");
-	}
-
 	//Prepare the sockaddr_in structure
 	server.sin_family = AF_INET;
 	server.sin_addr.s_addr = inet_addr("10.0.0.1");
@@ -114,6 +107,13 @@ int main(int argc, char *argv[])
     
     	// Run the handshake test_number of times	
 	for(int i = 0; i <= test_number; i++){
+	
+		//Create socket
+		socket_desc = socket(AF_INET , SOCK_STREAM , 0);
+		if (socket_desc == -1)
+		{
+			printf("Could not create socket");
+		}
 	
 		/*Initialize the handshake state with the protocol and the role*/
 		err = noise_handshakestate_new_by_name(&handshake,  handshake_pattern, NOISE_ROLE_INITIATOR);
@@ -156,7 +156,7 @@ int main(int argc, char *argv[])
 		
 		//Set the remote static hybrid/KEM public key
 		if (noise_handshakestate_needs_remote_hybrid_public_key(handshake)){
-			dh = noise_handshakestate_get_remote_public_key_dh(handshake);
+			dh = noise_handshakestate_get_remote_hybrid_public_key_dh(handshake);
 			err = noise_dhstate_set_public_key(dh, server_public_pq, 800);
 			
 			if (err != NOISE_ERROR_NONE) {
@@ -351,7 +351,7 @@ int main(int argc, char *argv[])
 	computation time in both cycles and ms */
 	printf("\\hline\\hline \n");
 	
-	printf("Hybrid %s & %7.2f & %7.2f & %7.2f & %7.2f & %7.2f & %7.2f \\\\ \n", argv[1], overall_ms/test_number, results[test_number/2], results[test_number-1], results[0], (total_time_comp/test_number+1)/1000000.0, comp_ms/(test_number+1));
+	printf("%s & %7.2f & %7.2f & %7.2f & %7.2f & %7.2f & %7.2f \\\\ \n", argv[1], overall_ms/test_number, results[test_number/2], results[test_number-1], results[0], (total_time_comp/test_number+1)/1000000.0, comp_ms/(test_number+1));
 
 	printf("\\hline \n");
 
