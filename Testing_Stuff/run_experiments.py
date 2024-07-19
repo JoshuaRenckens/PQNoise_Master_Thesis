@@ -1,6 +1,7 @@
 import os
 import math
 import subprocess
+import time
 
 def run_tests(to_execute, to_save, delay, loss, subject):
     path = ''
@@ -15,17 +16,17 @@ def run_tests(to_execute, to_save, delay, loss, subject):
 
     client_command = [
         'ip', 'netns', 'exec', 'cli_ns',
-        path + '' + file_addition + 'client', to_execute
+        path + '' + file_addition + 'client', to_execute, str(loss)
     ]
     
     if subject != 'TLS':
 	    server_command = [
 		'ip', 'netns', 'exec', 'srv_ns',
-		path + '' + file_addition + 'server', to_execute
+		path + '' + file_addition + 'server', to_execute, str(loss)
 	    ]
 
 	    server_output = open('./Results/server_'+to_save, 'a+')
-	    server_output.write('Runs with delay: '+str(delay)+' and loss rate: '+str(loss)+'\n')
+	    #server_output.write('Runs with delay: '+str(delay)+' and loss rate: '+str(loss)+'\n')
 	    server_output.flush()
 	    print(" Running: " + " ".join(server_command))
 	    # Run the server component non-blocking
@@ -37,7 +38,7 @@ def run_tests(to_execute, to_save, delay, loss, subject):
 	    )
 
     client_output = open('./Results/client_' + to_save, 'a+')
-    client_output.write('Runs with delay: '+str(delay)+' and loss rate: '+str(loss)+'\n')
+    #client_output.write('Runs with delay: '+str(delay)+' and loss rate: '+str(loss)+'\n')
     client_output.flush()
     print(" Running: " + " ".join(client_command))
     # Run the client component blocking
@@ -109,7 +110,7 @@ def get_rtt():
     
     
 # Possible subjects: Noise, TLS
-subject = 'TLS'
+subject = 'Noise'
 # ['2.684', '15.458', '39.224', '97.73']
 for latency_ms in ['2.684']:
     
@@ -132,13 +133,14 @@ for latency_ms in ['2.684']:
 		stderr=subprocess.PIPE,
 		cwd='.'
 	    )
+	    time.sleep(5)
 
     # To execute a hybrid Noise pattern: NNhyb, NKhyb etc. to execute PQTLS or hybrid TLS just enter kyber512, x25519_kyber512 etc.
     # Didn't make a large array to iterate through since I didn't want to execute them all together, since that would take too long.
-    for to_execute in ['kyber512', 'x25519_kyber512']:
+    for to_execute in ['NK', 'NKhyb']:
         #for pkt_loss in [0, 0.1, 0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6, 7, 8, 9, 10]:
         # 0, 1, 3, 5, 8, 10, 13, 15, 18, 20
-        for pkt_loss in [0, 1, 3, 5, 8, 10, 13, 15, 18, 20]:
+        for pkt_loss in [0, 1]:
             change_qdisc('cli_ns', 'cli_ve', pkt_loss, delay=latency_ms)
             change_qdisc('srv_ns', 'srv_ve', pkt_loss, delay=latency_ms)
             res = run_tests(to_execute, 'Results_'+to_execute+'.txt', latency_ms, pkt_loss, subject)

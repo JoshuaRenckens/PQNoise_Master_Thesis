@@ -59,8 +59,8 @@ int load_key(char *file, uint8_t *key, int size){
 
 int main(int argc, char *argv[])
 {
-	if(argc != 2){
-		puts("Wrong amount of arguments, expected 1.");
+	if(argc != 3){
+		puts("Wrong amount of arguments, expected 2.");
 		return 1;
 	}
 	
@@ -338,6 +338,9 @@ int main(int argc, char *argv[])
 		if(i != 0){
 			results[i-1] = ((stop.tv_sec - start.tv_sec) * MS_IN_S) + ((stop.tv_nsec - start.tv_nsec) / NS_IN_MS);
 			overall_ms += results[i-1];
+		} else {
+			comp_ms = 0;
+			total_time_comp = 0;
 		}
 		
 		if(ok == 0){
@@ -349,11 +352,9 @@ int main(int argc, char *argv[])
 	qsort(results, sizeof(results)/sizeof(*results), sizeof(*results), comp);
 	/*Print in a format to copy paste into latex tables, in order of: what pattern we're at, average time, median time, max time, minimum time and lastly average 
 	computation time in both cycles and ms */
-	printf("\\hline\\hline \n");
-	
-	printf("%s & %7.2f & %7.2f & %7.2f & %7.2f & %7.2f & %7.2f \\\\ \n", argv[1], overall_ms/test_number, results[test_number/2], results[test_number-1], results[0], (total_time_comp/test_number+1)/1000000.0, comp_ms/(test_number+1));
-
 	printf("\\hline \n");
+	
+	printf("%s&%s&%.2f&%.2f&%.2f&%.2f&%.2f&%.2f\\\\\n", argv[2], argv[1], overall_ms/test_number, results[test_number/2], results[test_number-1], results[0], (total_time_comp/test_number)/1000000.0, comp_ms/(test_number));
 
 	return 0;
 }

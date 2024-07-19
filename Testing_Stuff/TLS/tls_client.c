@@ -12,14 +12,22 @@
 
 const char* host = "10.0.0.1:4433";
 
-int64_t get_cpucycles()
-{ // Access system counter for benchmarking
-  unsigned int hi, lo;
-
-  //asm("cpuid");
-  asm volatile ("rdtsc\n\t" : "=a" (lo), "=d"(hi));
-  return ((int64_t)lo) | (((int64_t)hi) << 32);
-}
+/*Access system counter for benchmarking*/
+/*int64_t get_cpucycles()
+{ 
+#if defined(__GNUC__) && defined(__ARM_ARCH_7A__)
+	// Case for the board
+        uint32_t r = 0;
+        asm volatile("mrc p15, 0, %0, c9, c13, 0" : "=r"(r) );
+        return r;
+#else
+	// Case for a laptop with an intel cpu
+	unsigned int hi, lo;
+  
+  	asm volatile ("rdtsc\n\t" : "=a" (lo), "=d"(hi));
+  	return ((int64_t)lo) | (((int64_t)hi) << 32);
+#endif
+}*/
 
 int comp(const void* elem1, const void* elem2){
 	double val1 = *((double*)elem1);
@@ -63,8 +71,8 @@ SSL* do_tls_handshake(SSL_CTX* ssl_ctx)
 int main(int argc, char* argv[])
 {
 
-    if(argc != 2){
-	puts("Wrong amount of arguments, expected 1.");
+    if(argc != 3){
+	puts("Wrong amount of arguments, expected 2.");
 	return 1;
     }
     
@@ -146,7 +154,8 @@ int main(int argc, char* argv[])
     }
     
     qsort(results_ms, sizeof(results_ms)/sizeof(*results_ms), sizeof(*results_ms), comp);
-    printf("Kyber512 & %7.2f & %7.2f & %7.2f & %7.2f\\\\ \n", total_time/test_number, results_ms[test_number/2], results_ms[test_number-1], results_ms[0]);
+    printf("\\hline\\hline \n");
+    printf("%s&%s&%.2f&%.2f&%.2f&%.2f\\\\\n",argv[2], argv[1], total_time/test_number, results_ms[test_number/2], results_ms[test_number-1], results_ms[0]);
     
     ret = 0;
     goto end;
