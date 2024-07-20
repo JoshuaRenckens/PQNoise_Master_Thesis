@@ -155,7 +155,7 @@ int main(int argc, char* argv[])
     
     qsort(results_ms, sizeof(results_ms)/sizeof(*results_ms), sizeof(*results_ms), comp);
     printf("\\hline\\hline \n");
-    printf("%s&%s&%.2f&%.2f&%.2f&%.2f\\\\\n",argv[2], argv[1], total_time/test_number, results_ms[test_number/2], results_ms[test_number-1], results_ms[0]);
+    printf("%s&%s&%.2f&%.2f&%.2f&%.2f&%.2f&%.2f\\\\\n",argv[2], argv[1], total_time/test_number, results_ms[test_number/2], results_ms[75*(test_number/100)], results_ms[95*(test_number/100)], results_ms[test_number-1], results_ms[0]);
     
     ret = 0;
     goto end;

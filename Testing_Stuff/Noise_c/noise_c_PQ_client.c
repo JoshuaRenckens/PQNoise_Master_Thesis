@@ -356,12 +356,11 @@ int main(int argc, char *argv[])
 		}
 		
 		qsort(results, sizeof(results)/sizeof(*results), sizeof(*results), comp);
-		/*Print in a format to copy paste into latex tables, in order of: what pattern we're at, average time, median time, max time, minimum time and lastly average 
-		computation time in both cycles and ms */
+		/*Print in a format to copy paste into latex tables, in order of: what pattern we're at, average time, median time, 75 percentile, 95 percentile, max time, minimum time and lastly average computation time in both cycles and ms */
 		if(k % 2 == 0){
 			printf("\\hline\\hline \n");
 		}
-		printf("%s&%s&%.2f&%.2f&%.2f&%.2f&%.2f&%.2f\\\\\n", argv[2], to_test[k], overall_ms/test_number, results[test_number/2], results[test_number-1], results[0], (total_time_comp/test_number)/1000000.0, comp_ms/(test_number));
+		printf("%s&%s&%.2f&%.2f&%.2f&%.2f&%.2f&%.2f&%.2f&%.2f\\\\\n", argv[2], argv[1], overall_ms/test_number, results[test_number/2], results[75*(test_number/100)], results[95*(test_number/100)], results[test_number-1], results[0], (total_time_comp/test_number)/1000000.0, comp_ms/(test_number));
 		if(k % 2 == 0){
 			printf("\\hline \n");
 		}
