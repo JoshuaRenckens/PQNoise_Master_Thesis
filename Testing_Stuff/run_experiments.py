@@ -19,6 +19,7 @@ def run_tests(to_execute, to_save, delay, loss, subject):
         path + '' + file_addition + 'client', to_execute, str(loss)
     ]
     
+    time.sleep(5)
     if subject != 'TLS':
 	    server_command = [
 		'ip', 'netns', 'exec', 'srv_ns',
@@ -66,7 +67,7 @@ def change_qdisc(ns, dev, pkt_loss, delay):
             'dev', dev, 'root', 'netem',
             'limit', '1000',
             'delay', str(delay)+'ms',
-            'rate', '1000mbit'
+            'rate', '10mbit'
         ]
     else:
         command = [
@@ -76,7 +77,7 @@ def change_qdisc(ns, dev, pkt_loss, delay):
             'limit', '1000',
             'loss', '{0}%'.format(pkt_loss),
             'delay', str(delay)+'ms',
-            'rate', '1000mbit'
+            'rate', '10mbit'
         ]
 
     print(" Running " + " ".join(command))
@@ -110,9 +111,9 @@ def get_rtt():
     
     
 # Possible subjects: Noise, TLS
-subject = 'TLS'
-# ['2.684', '15.458', '39.224', '97.73']
-for latency_ms in ['2.684']:
+subject = 'Noise'
+# ['2.684', '20', '49.7', '100']
+for latency_ms in ['49.7']:
     
     # Get the round trip time
     #change_qdisc('cli_ns', 'cli_ve', 0, delay=latency_ms)
@@ -133,14 +134,13 @@ for latency_ms in ['2.684']:
 		stderr=subprocess.PIPE,
 		cwd='.'
 	    )
-	    time.sleep(1)
 
-    # To execute a hybrid Noise pattern: NNhyb, NKhyb etc. to execute PQTLS or hybrid TLS just enter 'kyber512', 'x25519_kyber512' etc.
+    # To execute a hybrid Noise pattern: NNhyb, NKhyb etc. to execute PQTLS or hybrid TLS just enter 'X25519', 'kyber512', 'x25519_kyber512' etc.
     # Didn't make a large array to iterate through since I didn't want to execute them all together, since that would take too long.
-    for to_execute in ['X25519', 'kyber512', 'x25519_kyber512']:
+    for to_execute in ['NKhyb', 'NXhyb', 'XXhyb']:
         #for pkt_loss in [0, 0.1, 0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6, 7, 8, 9, 10]:
         # 0, 1, 3, 5, 8, 10, 13, 15, 18, 20
-        for pkt_loss in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]:
+        for pkt_loss in [16, 17, 18, 19, 20]:
             change_qdisc('cli_ns', 'cli_ve', pkt_loss, delay=latency_ms)
             change_qdisc('srv_ns', 'srv_ve', pkt_loss, delay=latency_ms)
             res = run_tests(to_execute, 'Results_'+to_execute+'.txt', latency_ms, pkt_loss, subject)

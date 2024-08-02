@@ -9,7 +9,7 @@
  * Currently missing the SEEC scheme when generating, only to be used in conjunction with the PQNoise patterns
 */
 
-// Create OQS_KEM object initialized with kyber 512.
+// Create OQS_KEM object initialized with Kyber-512.
 
 typedef struct
 {

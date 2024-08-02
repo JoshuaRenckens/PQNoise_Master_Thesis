@@ -1615,6 +1615,7 @@ static uint8_t const noise_pattern_NKhyb[] = {
         ),
 
         NOISE_TOKEN_E,
+        NOISE_TOKEN_ES,
         NOISE_TOKEN_SKEMH,
         NOISE_TOKEN_EH,
         NOISE_TOKEN_FLIP_DIR,
