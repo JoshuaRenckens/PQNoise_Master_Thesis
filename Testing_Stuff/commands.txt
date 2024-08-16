@@ -2,19 +2,22 @@ Stuff to do before being able to run:
 Install openssl, pre-installed version on ubuntu 22.04 works just fine.
 Build and install liboqs, follow the steps on the github page.
 
-Set ld variable for liboqs, since we want to use the kyber implementation from there, otherwise the linker won't find it.
+Set ld variable for liboqs, since we want to use the kyber implementation from there, otherwise the linker may not find it.
 
 Build instructions for noise-c work exactly as before, some slight changes in the Makefile.am files were done to make sure of that.
 
 
-Build command for the noise_c example, in the Testing_Stuff/Noise-c folder: (-loqs necessary after the PQNoise stuff was added, might get removed later in favor of directly including kyber files)
-Include noise_c as library, need to have it built as .a library, otherwise if built as .so then LD_LIBRARY_PATH needs to be set. 
+Build command for the noise_c example, in the Testing_Stuff/Noise-c folder: 
+Include noise_c as library, need to have it built as .a library, otherwise if built as .so then LD_LIBRARY_PATH needs to be set.
+ 
 gcc -Wall -g noise_c_PQ_server.c -I ../../Noise_c/include/ -L ../../Noise_c/src/protocol -lnoiseprotocol -o server -loqs
 gcc -Wall -g noise_c_PQ_client.c -I ../../Noise_c/include/ -L ../../Noise_c/src/protocol -lnoiseprotocol -o client -loqs
+gcc -Wall -g noise_c_hybrid_server.c -I ../../Noise_c/include/ -L ../../Noise_c/src/protocol -lnoiseprotocol -o hybserver -loqs
+gcc -Wall -g noise_c_hybrid_client.c -I ../../Noise_c/include/ -L ../../Noise_c/src/protocol -lnoiseprotocol -o hybclient -loqs
 
 
 
-Reproducing the benchmarking for noise_c:
+Setup commands to reproduce the evaluation:
 
 Check if hyperthreading is on on linux:
 cat /sys/devices/system/cpu/smt/active
@@ -22,7 +25,7 @@ cat /sys/devices/system/cpu/smt/active
 Disable hyperthreading:
 echo off | sudo tee /sys/devices/system/cpu/smt/control
 
-Check whether turbo boost is enabled, command technically checks whether "not turbo" is enabled, so 0 here means turbo is on "Not turbo is off" double negation:
+Check whether turbo boost is enabled, command technically checks whether "not turbo" is enabled, so 0 here means turbo is on:
 cat /sys/devices/system/cpu/intel_pstate/no_turbo
 
 Disable turbo boost on linux:
@@ -39,12 +42,6 @@ sudo cpupower frequency-set --governor performance
 Check that all of the cpus are using the performance governor:
 cpupower frequency-info -o proc
 
-Run the server or client as follows:
-taskset -c 2 sudo nice -n -20 ./server
-taskset -c 3 sudo nice -n -20 ./client
-
-taskset -c 2 will pin the program to core number 3, and sudo nice -n -20 will set the program to be highest priority (-20 to 19 with -20 being highest priority).
-
 
 !!! Information for the board:
 On the board I could not manage to install cpupower instead I had to use cpufreq with the following command to set all of the cpus to performance:
@@ -56,21 +53,8 @@ The board does not have hyperthreading or an equivalent to turbo boost.
 
 
 
-
-
-For virtual network:
+To setup the virtual network:
 Might need to install ethtool "sudo apt install ethtool"
-
-Still need to use the above commands except for the taskset and nice when running with namespaces.
-
-Disable hyperthreading:
-echo off | sudo tee /sys/devices/system/cpu/smt/control
-
-Disable turbo boost on linux:
-echo "1" | sudo tee /sys/devices/system/cpu/intel_pstate/no_turbo
-
-Set cpugovernor to performance to disable cpu frequency scaling:
-sudo cpupower frequency-set --governor performance
 
 Run namespace setup (In the folder above the client and server files):
 sudo sh setup_namespaces.sh
@@ -87,10 +71,5 @@ Commands to run in the namespaces:
 sudo ip netns exec srv_ns taskset -c 2 nice -n -20 ./server
 sudo ip netns exec cli_ns taskset -c 3 nice -n -20 ./client
 
-
-
-Board information:
-Overflow time for the cycle register: 2 seconds presumably
-
-
+taskset -c will pin the program to a given core, and sudo nice -n -20 will set the program to be highest priority (-20 to 19 with -20 being highest priority).
 

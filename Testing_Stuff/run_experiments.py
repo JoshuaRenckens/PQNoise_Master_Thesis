@@ -60,6 +60,7 @@ def run_tests(to_execute, to_save, delay, loss, subject):
     return 1
 
 def change_qdisc(ns, dev, pkt_loss, delay):
+# Change mbit depending on what you want to run
     if pkt_loss == 0:
         command = [
             'ip', 'netns', 'exec', ns,
@@ -89,37 +90,12 @@ def change_qdisc(ns, dev, pkt_loss, delay):
         cwd='.'
     )
     
-
-def get_rtt():
-    command = [
-        'ip', 'netns', 'exec', 'cli_ns',
-        'ping', '10.0.0.1', '-c', '30'
-    ]
-
-    print(" > " + " ".join(command))
-    result = subprocess.run(
-        command,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        cwd='.'
-    )
-    
-    print(result)
-
-    result_fmt = result.splitlines()[-1].split("/")
-    return result_fmt[4].replace(".", "p")
-    
     
 # Possible subjects: Noise, TLS
 subject = 'Noise'
-# ['2.684', '20', '49.7', '100']
-for latency_ms in ['49.7']:
+# ['2.684', '49.7', '100']
+for latency_ms in ['100']:
     
-    # Get the round trip time
-    #change_qdisc('cli_ns', 'cli_ve', 0, delay=latency_ms)
-    #change_qdisc('srv_ns', 'srv_ve', 0, delay=latency_ms)
-    #rtt_str = get_rtt()
-    #print(rtt)
     
     # If we are running TLS run the server component early, since it is kept open
     if subject == 'TLS':
@@ -137,10 +113,9 @@ for latency_ms in ['49.7']:
 
     # To execute a hybrid Noise pattern: NNhyb, NKhyb etc. to execute PQTLS or hybrid TLS just enter 'X25519', 'kyber512', 'x25519_kyber512' etc.
     # Didn't make a large array to iterate through since I didn't want to execute them all together, since that would take too long.
-    for to_execute in ['NKhyb', 'NXhyb', 'XXhyb']:
-        #for pkt_loss in [0, 0.1, 0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6, 7, 8, 9, 10]:
-        # 0, 1, 3, 5, 8, 10, 13, 15, 18, 20
-        for pkt_loss in [16, 17, 18, 19, 20]:
+    for to_execute in ['NN', 'NNhyb', 'NK', 'NKhyb', 'NX', 'NXhyb', 'XX', 'XXhyb']:
+        #for pkt_loss in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]:
+        for pkt_loss in [20]:
             change_qdisc('cli_ns', 'cli_ve', pkt_loss, delay=latency_ms)
             change_qdisc('srv_ns', 'srv_ve', pkt_loss, delay=latency_ms)
             res = run_tests(to_execute, 'Results_'+to_execute+'.txt', latency_ms, pkt_loss, subject)
