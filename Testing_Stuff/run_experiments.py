@@ -3,6 +3,8 @@ import math
 import subprocess
 import time
 
+# Not particularly sophisticated, some manual changes of variables required, specifically delay at the start and throughput in the change_qdisk function. Never bothered to automate this further as it took so long to run all loss rates anyways.
+
 def run_tests(to_execute, to_save, delay, loss, subject):
     path = ''
     file_addition = ''
@@ -60,7 +62,7 @@ def run_tests(to_execute, to_save, delay, loss, subject):
     return 1
 
 def change_qdisc(ns, dev, pkt_loss, delay):
-# Change mbit depending on what you want to run
+# Change mbit depending on 
     if pkt_loss == 0:
         command = [
             'ip', 'netns', 'exec', ns,
@@ -68,7 +70,7 @@ def change_qdisc(ns, dev, pkt_loss, delay):
             'dev', dev, 'root', 'netem',
             'limit', '1000',
             'delay', str(delay)+'ms',
-            'rate', '10mbit'
+            'rate', '1000mbit'
         ]
     else:
         command = [
@@ -78,7 +80,7 @@ def change_qdisc(ns, dev, pkt_loss, delay):
             'limit', '1000',
             'loss', '{0}%'.format(pkt_loss),
             'delay', str(delay)+'ms',
-            'rate', '10mbit'
+            'rate', '1000mbit'
         ]
 
     print(" Running " + " ".join(command))
@@ -92,9 +94,9 @@ def change_qdisc(ns, dev, pkt_loss, delay):
     
     
 # Possible subjects: Noise, TLS
-subject = 'Noise'
-# ['2.684', '49.7', '100']
-for latency_ms in ['100']:
+subject = 'TLS'
+# ['2.684', '5', '49.7', '100']
+for latency_ms in ['5']:
     
     
     # If we are running TLS run the server component early, since it is kept open
@@ -113,7 +115,7 @@ for latency_ms in ['100']:
 
     # To execute a hybrid Noise pattern: NNhyb, NKhyb etc. to execute PQTLS or hybrid TLS just enter 'X25519', 'kyber512', 'x25519_kyber512' etc.
     # Didn't make a large array to iterate through since I didn't want to execute them all together, since that would take too long.
-    for to_execute in ['NN', 'NNhyb', 'NK', 'NKhyb', 'NX', 'NXhyb', 'XX', 'XXhyb']:
+    for to_execute in ['x25519_kyber512']:
         #for pkt_loss in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]:
         for pkt_loss in [20]:
             change_qdisc('cli_ns', 'cli_ve', pkt_loss, delay=latency_ms)

@@ -5,7 +5,6 @@
 #include <time.h>
 
 /*
- * Kyber stuff, should be put in a seperate file but I don't know how to change the makefile here
  * Currently missing the SEEC scheme when generating, only to be used in conjunction with the PQNoise patterns
 */
 
