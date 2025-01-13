@@ -1,0 +1,26 @@
+All files are named based on which Noise pattern was tested/which algorithm TLS was run with, so for TLS this gives us X25519 for classical, Kyber512 for post quantum, and X25519_Kyber512 for hybrid. Results are also split between times measure on the clientside and times measured on the serverside.
+
+Each line of data in the results files contains the following data, measured over 1000 runs, in order:
+	For the Noise results:
+		Packet loss rate,
+		Pattern name,
+		Average time taken,
+		Median time taken,
+		Time taken at 75th percentile,
+		Time taken at 95th percentile,
+		Maximum time taken,
+		Minimum time taken, 
+		Average computation time in cpucycles,
+		Average computation time in ms
+		
+	For the TLS results:
+		Packet loss rate,
+		Algorithms,
+		Average time taken,
+		Median time taken,
+		Time taken at 75th percentile,
+		Time taken at 95th percentile,
+		Maximum time taken,
+		Minimum time taken
+		
+Lastly, which network scenario was used when measuring was not saved in the files, the results are however ordered as follows: RTT 5.5ms with throughput 1000mbit/s, RTT 100ms with throughput 10mbit/s, RTT 200ms with throughput 10mbit/s and lastly, RTT 10ms with throughput 10mbit/s. So we have a subject being measured in a specific network scenario for all different packet loss rates and then the next scenario etc.

@@ -141,7 +141,7 @@ static void BM_NoiseHandshake(benchmark::State& state) {
 	socket_desc = socket(AF_INET , SOCK_STREAM , 0);
 	if (socket_desc == -1)
 	{
-		//std::cout << "Could not create socket";
+		std::cout << "Could not create socket\n";
 	}
 	    
 	//Prepare the sockaddr_in structure
@@ -153,11 +153,11 @@ static void BM_NoiseHandshake(benchmark::State& state) {
 	//Bind
 	if( bind(socket_desc,(struct sockaddr *)&server , sizeof(server)) < 0)
 	{
-		//std::cout << "bind failed";
+		std::cout << "bind failed\n";
 		return ;
 	}
 	
-	std::cout << "Here";
+	std::cout << "Here1\n";
 	    
 	//Listen
 	listen(socket_desc , 3);
@@ -165,18 +165,21 @@ static void BM_NoiseHandshake(benchmark::State& state) {
 	//Accept incoming connection
 	c = sizeof(struct sockaddr_in);
 	new_socket = accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&c);
-	std::cout << "Here";
+	std::cout << "Here2\n";
 	
 	// Where we measure. Because there is setup that has to be done every loop we start by pausing, doing the setup, then resuming.
 	for (auto _ : state){
 		// Pause timing and resume timing together give an overhead of ~200 ns every time they are used.
 		state.PauseTiming();
-		std::cout << "Here";
+		std::cout << "Here3\n";
 		NoiseHandshakeState *handshake = iteration_setup(id);
     		state.ResumeTiming();
     		
     		noise_handshake(handshake, new_socket);
 	}
+	
+	close(new_socket);
+    	close(socket_desc);
 		
 }
 
